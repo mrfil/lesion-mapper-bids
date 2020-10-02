@@ -12,11 +12,11 @@ Wetter, N. C., Hubbard, E. A., Motl, R. W., & Sutton, B. P. (2016). Fully automa
 
 For research purposes only! Please see LICENSE.txt
 
-[Ben Zimmerman](bzimme5@illinois.edu)  
-[Nate Wetter](nwetter2@illinois.edu)  
-[Brad Sutton](bsutton@illinois.edu)  
-[Magnetic Resonance Functional Imaging Lab](mrfil.bioen.illinois.edu)  
-[University of Illinois at Urbana-Champaign](illinois.edu)  
+[Ben Zimmerman](mailto:bzimme5@illinois.edu)  
+[Nate Wetter](mailto:nwetter2@illinois.edu)  
+[Brad Sutton](mailto:bsutton@illinois.edu)  
+[Magnetic Resonance Functional Imaging Lab](http://mrfil.bioen.illinois.edu)  
+[University of Illinois at Urbana-Champaign](https://illinois.edu)  
 
 ### Usage 
 
