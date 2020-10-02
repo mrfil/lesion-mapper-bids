@@ -7,8 +7,8 @@ Usage() {
 The lesion-mapper app has the following command line arguments:
 
 		usage: lesion-mapper bids_dir fmriprep_dir output_dir {participant,group} 
-		        [--participant_label PARTICIPANT_LABEL [PARTICIPANT_LABEL ...]]
-		        [-midline INT]
+		        	[--participant_label PARTICIPANT_LABEL [PARTICIPANT_LABEL ...]]
+		        	[-midline INT]
 				[-midmax INT]
 				[-no2fast]
 				[-v]
@@ -19,7 +19,7 @@ The lesion-mapper app has the following command line arguments:
 		
 
 		positional arguments:
-		  	    bids_dir         
+		  	bids_dir         
 					The directory with the input dataset formatted
 		                        according to the BIDS standard.
                             
@@ -46,24 +46,24 @@ The lesion-mapper app has the following command line arguments:
 		                        not include "sub-"). If this parameter is not provided
 		                        all subjects will be analyzed. Multiple participants
 		                        can be specified with a space separated list.
-      		-midline            <int>
+      			-midline            <int>
                             		Remove lesions that are within <int> millimeters of touching
                             		the saggital midline plane. Should be greater than or equal to zero.
                             		If set to zero, lesions crossing the midline will be removed.
                             		Default is 4. Use -1 to skip this step.
                             		Will be skipped if -wmthr is skipped.
-      		-midmax             <int>  
+      			-midmax             <int>  
                             		Only remove parts of midline lesions that are within
                             		<int> mm of midline. Should be greater than or equal to -midline.
                             		Default is 9. Use -1 to skip this constraint and allow all lesions
                             		contiguous with those selected via -midline to be removed.
-      		-no2fast 
+      			-no2fast 
                             		Skip secondary fast step. Results should be more sensitive and less specific.
-      		-v                    
+      			-v                    
                             		Verbose
-      		-png
+      			-png
                             		Generate png image outputs
-      		-h                    
+      			-h                    
                             		Show this help message and exit
  
 
