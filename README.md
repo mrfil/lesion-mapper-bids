@@ -34,20 +34,24 @@ The lesion-mapper app has the following command line arguments:
 				[-h]
 				
 
-		Example BIDS App entry point script.
+		
 
 		positional arguments:
-		  bids_dir              The directory with the input dataset formatted
+		  	bids_dir         
+					The directory with the input dataset formatted
 		                        according to the BIDS standard.
                             
-      fmriprep_dir          The directory with the fmriprep (or equivalent) pre-processed derivatives.
+      			fmriprep_dir     
+					The directory with the fmriprep (or equivalent) pre-processed derivatives.
 		  
-      output_dir            The directory where the output files should be stored.
+      			output_dir       
+					The directory where the output files should be stored.
 		                        If you are running a group level analysis, this folder
 		                        should be prepopulated with the results of
 		                        the participant level analysis.
 		  
-      {participant,group}   Level of the analysis that will be performed. Multiple
+      			{participant,group}   
+					Level of the analysis that will be performed. Multiple
 		                        participant level analyses can be run independently
 		                        (in parallel).
 
