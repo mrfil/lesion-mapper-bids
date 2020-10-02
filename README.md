@@ -25,9 +25,14 @@ The lesion-mapper app assumes that your T1-weighted anatomical and T2 FLAIR data
 The lesion-mapper app has the following command line arguments:
 
 		usage: lesion-mapper bids_dir fmriprep_dir output_dir {participant,group} 
-                  [-h]
-		              [--participant_label PARTICIPANT_LABEL [PARTICIPANT_LABEL ...]]
-		              [-midline <int>]
+		              	[--participant_label PARTICIPANT_LABEL [PARTICIPANT_LABEL ...]]
+		              	[-midline INT]
+				[-midmax INT]
+				[-no2fast]
+				[-v]
+				[-png]
+				[-h]
+				
 
 		Example BIDS App entry point script.
 
@@ -48,32 +53,32 @@ The lesion-mapper app has the following command line arguments:
 
 		optional arguments:
 		  
-		  --participant_label PARTICIPANT_LABEL [PARTICIPANT_LABEL ...]
+			--participant_label PARTICIPANT_LABEL [PARTICIPANT_LABEL ...]
 		                        The label(s) of the participant(s) that should be
 		                        analyzed. The label corresponds to
 		                        sub-<participant_label> from the BIDS spec (so it does
 		                        not include "sub-"). If this parameter is not provided
 		                        all subjects will be analyzed. Multiple participants
 		                        can be specified with a space separated list.
-      -midline            <int>
-                            Remove lesions that are within <int> millimeters of touching
-                            the saggital midline plane. Should be greater than or equal to zero.
-                            If set to zero, lesions crossing the midline will be removed.
-                            Default is 4. Use -1 to skip this step.
-                            Will be skipped if -wmthr is skipped.
-      -midmax             <int>  
-                            Only remove parts of midline lesions that are within
-                            <int> mm of midline. Should be greater than or equal to -midline.
-                            Default is 9. Use -1 to skip this constraint and allow all lesions
-                            contiguous with those selected via -midline to be removed.
-      -no2fast 
-                            Skip secondary fast step. Results should be more sensitive and less specific.
-      -v                    
-                            Verbose
-      -png
-                            Generate png image outputs
-      -h                    
-                            Show this help message and exit
+      			-midline            <int>
+                            		Remove lesions that are within <int> millimeters of touching
+                            		the saggital midline plane. Should be greater than or equal to zero.
+                            		If set to zero, lesions crossing the midline will be removed.
+                            		Default is 4. Use -1 to skip this step.
+                            		Will be skipped if -wmthr is skipped.
+      			-midmax             <int>  
+                            		Only remove parts of midline lesions that are within
+                            		<int> mm of midline. Should be greater than or equal to -midline.
+                            		Default is 9. Use -1 to skip this constraint and allow all lesions
+                            		contiguous with those selected via -midline to be removed.
+      			-no2fast 
+                            		Skip secondary fast step. Results should be more sensitive and less specific.
+      			-v                    
+                            		Verbose
+      			-png
+                            		Generate png image outputs
+      			-h                    
+                            		Show this help message and exit
  
 
 
