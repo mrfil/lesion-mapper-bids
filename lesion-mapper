@@ -73,14 +73,16 @@ EOF
     exit 1
 }
 
-# TODO: output to log file
-# TODO: assign each lesion a unique number
-
 [ -z "$2" ] && Usage
 
 ###################################
 # default values / initialization
 ###################################
+bids_dir=""
+fmriprep_dir=""
+output_dir=""
+analysis_level=""
+
 t2_brain=""
 verbose=0
 png=0
