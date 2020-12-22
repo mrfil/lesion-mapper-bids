@@ -1,6 +1,6 @@
 ## Lesion Mapper
 
-T2 FLAIR lesion volume is an important biomarker in aging and pathophysiology. The purpose of this software is to provide an easily usable and openly accessible method for quantifying lesions from MR images that does not require manual adjustments or multiple contrasts. The tool is provided as a BIDS-app, which assumes that you have fmriprep derivatives for T1-weighted anatomical images, and a T2-FLAIR image organized according to BIDS structure. 
+T2 FLAIR lesion volume is an important biomarker in aging and pathophysiology. The purpose of this software is to provide an easily usable and openly accessible method for quantifying lesions from MR images that does not require manual adjustments or multiple contrasts. The tool is provided as a BIDS-app, which assumes that you have fmriprep derivatives for T1-weighted anatomical images, and a T2-FLAIR image organized according to BIDS structure.
 
 
 
@@ -19,13 +19,13 @@ For research purposes only! Please see LICENSE.txt
 [Magnetic Resonance Functional Imaging Lab](http://mrfil.bioen.illinois.edu)  
 [University of Illinois at Urbana-Champaign](https://illinois.edu)  
 
-### Usage 
+### Usage
 
-The lesion-mapper app assumes that your T1-weighted anatomical and T2 FLAIR data is formatted according to BIDS. It also assumes that your T1-weighted data has been preprocessed with fmriprep. 
+The lesion-mapper app assumes that your T1-weighted anatomical and T2 FLAIR data is formatted according to BIDS. It also assumes that your T1-weighted data has been preprocessed with fmriprep.
 
 The lesion-mapper app has the following command line arguments:
 
-		usage: lesion-mapper bids_dir fmriprep_dir output_dir {participant,group} 
+		usage: lesion-mapper bids_dir fmriprep_dir output_dir {participant,group}
 		              	[--participant_label PARTICIPANT_LABEL [PARTICIPANT_LABEL ...]]
 		              	[-midline INT]
 				[-midmax INT]
@@ -33,32 +33,33 @@ The lesion-mapper app has the following command line arguments:
 				[-v]
 				[-png]
 				[-h]
-				
 
-		
+
+
 
 		positional arguments:
-		  	bids_dir         
+
+						bids_dir         
 					The directory with the input dataset formatted
 		                        according to the BIDS standard.
-                            
+
       			fmriprep_dir     
 					The directory with the fmriprep (or equivalent) pre-processed derivatives.
-		  
+
       			output_dir       
 					The directory where the output files should be stored.
 		                        If you are running a group level analysis, this folder
 		                        should be prepopulated with the results of
 		                        the participant level analysis.
-		  
+
       			{participant,group}   
 					Level of the analysis that will be performed. Multiple
 		                        participant level analyses can be run independently
 		                        (in parallel).
 
 		optional arguments:
-		  
-			--participant_label PARTICIPANT_LABEL [PARTICIPANT_LABEL ...]
+
+						--participant_label PARTICIPANT_LABEL [PARTICIPANT_LABEL ...]
 		                        The label(s) of the participant(s) that should be
 		                        analyzed. The label corresponds to
 		                        sub-<participant_label> from the BIDS spec (so it does
@@ -76,7 +77,7 @@ The lesion-mapper app has the following command line arguments:
                             		<int> mm of midline. Should be greater than or equal to -midline.
                             		Default is 9. Use -1 to skip this constraint and allow all lesions
                             		contiguous with those selected via -midline to be removed.
-      			-no2fast 
+      			-no2fast
                             		Skip secondary fast step. Results should be more sensitive and less specific.
       			-v                    
                             		Verbose
@@ -84,11 +85,3 @@ The lesion-mapper app has the following command line arguments:
                             		Generate png image outputs
       			-h                    
                             		Show this help message and exit
- 
-
-
-
-
-
-
-
