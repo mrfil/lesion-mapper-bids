@@ -6,43 +6,42 @@ Usage() {
 
 The lesion-mapper app has the following command line arguments:
 
-		usage: lesion-mapper bids_dir 
-		        [-participant_label PARTICIPANT_LABEL]
+		usage: lesion-mapper bids_dir
+				[-participant_label PARTICIPANT_LABEL]
 				[-derivatives_dir DERIVATIVES_DIRECTORY]
 				[-fmriprep_dir FMRIPREP_DIRECTORY]
-				[-ses_label SESSION_LABEL] 
-		        [-midline INT]
+				[-ses_label SESSION_LABEL]
+				[-midline INT]
 				[-midmax INT]
+				[-wmthr  0 < num < 1]
 				[-no2fast]
 				[-v]
-				[-png]
 				[-h]
 				
 
 		
 
 		positional arguments:
-		  	bids_dir         
-					The directory with the input dataset formatted
-		                        according to the BIDS standard.
+			bids_dir         
+				The directory with the input dataset formatted
+				according to the BIDS standard.
 		  
 
 		optional arguments:
 		  
 			-participant_label PARTICIPANT_LABEL
-		            The label of the participant that should be
-		            analyzed. The label corresponds to
-		            sub-<participant_label> from the BIDS spec (so it does
-		             not include "sub-"). If this parameter is not provided
-		            all subjects in the BIDS folder will be analyzed. 
+					The label of the participant that should be
+					analyzed. The label corresponds to
+					sub-<participant_label> from the BIDS spec (so it does
+					not include "sub-"). If this parameter is not provided
+					all subjects in the BIDS folder will be analyzed. 
 
 			-derivatives_dir   DERIVATIVES_DIRECTORY    
 					The directory where the output files should be stored. By
 					default, these files will be put in a new directory called
 					'lesion-mapper', within your BIDS derivatives directory.
-		                        
-			                            
-      		-fmriprep_dir   FMRIPREP_DIRECTORY 
+		                                                
+			-fmriprep_dir   FMRIPREP_DIRECTORY 
 					The directory with the fmriprep (or equivalent) pre-processed 
 					derivatives.lesion-mapper works best if freesurfer run inside 
 					fmriprep, because in the best case scenario it will look for 
@@ -54,49 +53,54 @@ The lesion-mapper app has the following command line arguments:
 					(e.g. "A" for ses-A). If a ses_label is not included, lesion-mapper will 
 					assume that the session label is omitted for the BIDS dataset.
 
-      		-midline    <int>
-                    Remove lesions that are within <int> millimeters of touching
-                    the saggital midline plane. Should be greater than or equal to zero.
-                    If set to zero, lesions crossing the midline will be removed.
-                    Default is 4. Use -1 to skip this step.
-                    Will be skipped if -wmthr is skipped.
+			-midline    <int>
+					Remove lesions that are within <int> millimeters of touching
+					the saggital midline plane. Should be greater than or equal to zero.
+					If set to zero, lesions crossing the midline will be removed.
+					Default is 4. Use -1 to skip this step.
+					Will be skipped if -wmthr is skipped.
 
-      		-midmax             <int>  
-                    Only remove parts of midline lesions that are within
-                    <int> mm of midline. Should be greater than or equal to -midline.
-                    Default is 9. Use -1 to skip this constraint and allow all lesions
-                    contiguous with those selected via -midline to be removed.
+			-midmax     <int>  
+					Only remove parts of midline lesions that are within
+					<int> mm of midline. Should be greater than or equal to -midline.
+					Default is 9. Use -1 to skip this constraint and allow all lesions
+					contiguous with those selected via -midline to be removed.
+			
+			-wmthr      <0 < num < 1>
+					Sets the probability that an area is white matter. It is a prerequisite that 
+					white matter hyperintensities occur in white matter. Lower numbers will be
+					more sensitive but have higher false positives. Higher numbers will be more specific
+					but have higher false negatives.
 
-      		-no2fast 
-                    Skip secondary fast step. Results should be more sensitive and less specific.
+			-no2fast 
+					Skip secondary fast step. Results should be more sensitive and less specific.
 
-      		-v                    
-                    Verbose
+			-v                    
+					Keeps all output, including temp files; more verbose
 
-      		-png
-                    Generate png image outputs
 
-      		-h                    
-                    Show this help message and exit
+			-h                    
+					Show this help message and exit
  
 
-Last updated: December 8, 2020
+Last updated: July 14, 2021
 
 EOF
-    exit 1
+     exit 1
 }
 
 
 ######################################
 #GLOBALS
 ######################################
-readonly ARGS="$@"
+ARGS=("$@")
+
 
 
 ###################################### 
 #initial test
 ######################################
-[ -z "${ARGS[1]}" ] && Usage
+[ -z "${ARGS[0]}" ] && Usage
 
 
 
@@ -106,28 +110,33 @@ readonly ARGS="$@"
 
 main() {
 	
-	cmdline $ARGS
+	echo "Entered main function"
+	cmdline "${ARGS[@]}"
 	
 	#if SES_LABEL exists, use it.
 	if [ -n "${SES_LABEL}" ];then
 		SES="ses-${SES_LABEL}"
+		_SES="_${SES}"
+		dirSES="${SES}/"
 	else
-		SES= 
+		SES=
+		_SES=
+		dirSES=
 	fi
 
 	for SUB in ${SUBS[@]}; do
 		
-		set_subject_global_params
+		setup_subject_global_params
 				
-		if [ -d ${SUB_FMRIPREP_DIR} ];then
+		if [ -d ${SUB_FMRIPREP_DIR} ]; then
 
 			lesion_map_with_fmriprep 
 
-		elif #T1 ;then
+		elif [ -f  ${T1W_RAW} ]; then
 			
 			lesion_map_with_T1w
 
-		elif #Just FLAIR; then
+		elif [ -f ${FLAIR} ]; then
 		
 			lesion_map_with_FLAIR_only
 		else
@@ -137,24 +146,23 @@ main() {
 
 		fi #prerequisite files
 
-		
+		rm ${TEMP*}	
 
 	done #subject loop
 
 }
-
-main
-
 
 #####################################
 # Understanding the command
 #####################################
 cmdline() {
 
+	echo "Entered cmdline function"
+
 	###################################
 	# default values / initialization
 	###################################
-	BIDS_DIR="${ARGS[1]}"
+	BIDS_DIR="${ARGS[0]}"
 	DERIVATIVES_DIR="${BIDS_DIR}/derivatives/lesion-mapper"
 	FMRIPREP_DIR=
 	PARTICIPANT_LABEL=
@@ -167,48 +175,85 @@ cmdline() {
 	DO2FAST=1
 	local failed=0
 
-	while [ -n "${ARGS[2]}" ]
+	while [ ! -z "$2" ]
 	do
-		if [ "${ARGS[2]}" = "-participant_label" ]; then
-	        	PARTICIPANT_LABEL="${ARGS[3]}"
+		if [ "$2" = "-participant_label" ]; then
+	        	PARTICIPANT_LABEL="$3"
         		shift 2
-    	elif [ "${ARGS[2]}" = "-fmriprep_dir" ]; then
-				FMRIPREP_DIR="${ARGS[3]}"
+				
+				
+    	elif [ "$2" = "-fmriprep_dir" ]; then
+				FMRIPREP_DIR="$3"
 				shift 2
-		elif [ "${ARGS[2]}" = "-derivatives_dir" ]; then
-				DERIVATIVES_DIR="${ARGS[3]}"
+				
+		elif [ "$2" = "-derivatives_dir" ]; then
+				DERIVATIVES_DIR="$3"
 				shift 2
-		elif [ "${ARGS[2]}" = "-ses_label" ];then
-				SES_LABEL="${ARGS[3]}"
+				
+		elif [ "$2" = "-ses_label" ];then
+				SES_LABEL="$3"
 				shift 2
-    	elif [ "${ARGS[2]}" = "-v" ]; then
+				
+    	elif [ "$2" = "-v" ]; then
         		VERBOSE=1
         		shift
-    	elif [ "${ARGS[2]}" = "-png" ]; then
+				
+				
+    	elif [ "$2" = "-png" ]; then
         		PNG=1
         		shift
-    	elif [ "${ARGS[2]}" = "-wmthr" ]; then
-        		WMTHR="${ARGS[3]}"
+				
+    	elif [ "$2" = "-wmthr" ]; then
+        		WMTHR="$3"
         		shift 2
-    	elif [ "${ARGS[2]}" = "-midline" ]; then
-        		MIDLINE="${ARGS[3]}"
+				
+    	elif [ "$2" = "-midline" ]; then
+        		MIDLINE="$3"
         		shift 2
-    	elif [ "${ARGS[2]}" = "-midmax" ]; then
-        		MIDMAX="${ARGS[3]}"
+				
+    	elif [ "$2" = "-midmax" ]; then
+        		MIDMAX="$3"
         		shift 2
-    	elif [ "${ARGS[2]}" = "-no2fast" ]; then
+				
+    	elif [ "$2" = "-no2fast" ]; then
         		DO2FAST=0
         		shift
-		elif [ "${ARGS[2]}" = "-h" ]; then
+				
+		elif [ "$2" = "-h" ]; then
 				Usage
 				exit 0
 				shift
+				
     	else
-        		echo "ERROR: "${ARGS[2]}" is not a valid parameter"
+        		echo "ERROR: "$2" is not a valid parameter"
         		failed=1
         		shift
+				
     	fi
 	done
+
+
+	if [[ -d "${BIDS_DIR}/derivatives/fmriprep" && -z "${FMRIPREP_DIR}" ]]; then
+		FMRIPREP_DIR="${BIDS_DIR}/derivatives/fmriprep"
+	fi
+
+
+	# Output verbosity
+	if [ $VERBOSE = 1 ]; then
+    		echo "BIDS directory=$BIDS_DIR"
+    		echo "Derivatives directory=$DERIVATIVES_DIR"
+		if [ -n "$FMRIPREP_DIR" ];then
+			echo "fMRIprep directory=$FMRIPREP_DIR"
+		fi
+
+		if [ -n "$PARTICIPANT_LABEL" ]; then
+			echo "Participant label=$PARTICIPANT_LABEL"
+		fi
+    		echo "png=$PNG"
+    		echo "wmthr=$WMTHR"
+    		echo "midline=$MIDLINE"
+		echo "midmax=$MIDMAX"
+	fi
 
 	# Check if FSL is installed
 	if [ -z "$FSLDIR" ]; then
@@ -228,22 +273,7 @@ cmdline() {
     		exit 1
 	fi
 
-	# Output verbosity
-	if [ $VERBOSE = 1 ]; then
-    		echo "BIDS directory=$BIDS_DIR"
-    		echo "Derivatives directory=$DERIVATIVES_DIR"
-		if [ -n "$FMRIPREP_DIR" ];then
-			echo "fMRIprep directory=$FMRIPREP_DIR"
-		fi
 
-		if [ -n "$PARTICIPANT_LABEL" ]; then
-			echo "Participant label=$PARTICIPANT_LABEL"
-		fi
-    		echo "png=$PNG"
-    		echo "wmthr=$WMTHR"
-    		echo "midline=$MIDLINE"
-		echo "midmax=$MIDMAX"
-	fi
 
 	
 	# Build the subject array
@@ -266,9 +296,15 @@ setup_subject_global_params() {
 	# I've kept a lot of the variables local at the expense of redundancy to be safe.
 	# For example, the location of the T1w images varies by BIDS dataset.
 	# Here are usefully global variables.
+	#TODO: Fix subject output directories
+	#TODO: Add pngs
+	#TODO: Move NWTools inside
+	#TODO: Create dockerfile
+	
 
 	#Future outputs
-	SUB_OUTPUT_DIR="${DERIVATIVES_DIR}/${SUB}/${SES}"
+	SUB_OUTPUT_DIR="${DERIVATIVES_DIR}/${SUB}/${dirSES}"
+
 
 	#Setup timing params
 	STARTTIME=$(date +%s)
@@ -281,30 +317,33 @@ setup_subject_global_params() {
 	# Note that all of these may not be used, depending on what's available
 	
 	SUB_FMRIPREP_DIR="${FMRIPREP_DIR}/${SUB}"
+	
+
 
 	#Possible inputs
-	#TODO: Fix subject output directories
-	FLAIR="${BIDS_DIR}/${SUB}/${SES}/anat/${SUB}_${SES}_FLAIR.nii.gz"
-	FLAIR_BRAIN_MASK="${SUB_OUTPUT_DIR}/${SUB}_${SES}_space-FLAIR_desc-brain_mask.nii.gz"
-	FLAIR_BRAIN="${SUB_OUTPUT_DIR}/${SUB}_${SES}_desc-brain_FLAIR.nii.gz"
-	
-	
-	
-	
-	FLAIR_TO_T1="${SUB_OUTPUT_DIR}/${SUB}_${SES}_from-FLAIR_to-T1w_mode-image_xfm.mat"
-	FLAIR_IN_T1="${SUB_OUTPUT_DIR}/${SUB}_${SES}_space-T1w_FLAIR.nii.gz"
-	T1_to_FLAIR="${SUB_OUTPUT_DIR}/${SUB}_${SES}_from-T1w_to-FLAIR_mode-image_xfm.mat"
 
-	FLAIR_LESIONMAP="${SUB_OUTPUT_DIR}/${SUB}_${SES}_desc-lesionmap_FLAIR.nii.gz"
+	FLAIR="${BIDS_DIR}/${SUB}/${dirSES}anat/*FLAIR.nii.gz"
+	FLAIR_PREPROC="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-preproc_FLAIR.nii.gz"
+	T1W_PREPROC="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-preproc_T1w.nii.gz"
+	T1W_RAW="${BIDS_DIR}/${SUB}/${dirSES}anat/*T1w.nii.gz"
+	FLAIR_BRAIN_MASK="${SUB_OUTPUT_DIR}${SUB}_${SES}_space-FLAIR_desc-brain_mask.nii.gz"
+	FLAIR_BRAIN="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-brain_FLAIR.nii.gz"
+	FLAIR_TO_T1="${SUB_OUTPUT_DIR}${SUB}${_SES}_from-FLAIR_to-T1w_mode-image_xfm.mat"
+	FLAIR_IN_T1="${SUB_OUTPUT_DIR}${SUB}${_SES}_space-T1w_FLAIR.nii.gz"
+	T1_TO_FLAIR="${SUB_OUTPUT_DIR}${SUB}${_SES}_from-T1w_to-FLAIR_mode-image_xfm.mat"
+
+
+	FLAIR_LESIONMAP="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-lesionmap_FLAIR.nii.gz"
 
 
 	#Temp outputs (ported between functions, but not typically useful to keep
 	
-	TEMP_FLAIR_NONBRAIN="${SUB_OUTPUT_DIR}/${SUB}_${SES}_desc-lesioncandidates_FLAIR.nii.gz"
+	TEMP_FLAIR_NONBRAIN="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-lesioncandidates_FLAIR.nii.gz"
+
+	MNI_TO_FLAIR="${SUB_OUTPUT_DIR}${SUB}${_SES}_from-MNI_to-FLAIR_mode-image_xfm.mat"
+	MNI_TO_FLAIR_WARP="${SUB_OUTPUT_DIR}${SUB}${_SES}_from-MNI_to-FLAIR_mode-image_warp.nii.gz"
+	MNI_IN_FLAIR_WARPED="${SUB_OUTPUT_DIR}${SUB}${_SES}_space-FLAIR_MNI152NLin6genAsym.nii.gz"
 	
-
-
-
 	mkdir -p ${SUB_OUTPUT_DIR}
 
 }
@@ -329,31 +368,34 @@ log_time() {
 		
 lesion_map_with_fmriprep(){
 	
-	local sub_fmriprep_ses_dir="${SUB_FMRIPREP_DIR}/${SES}"
+	local sub_fmriprep_ses_dir="${SUB_FMRIPREP_DIR}/${dirSES}"
 	local aseg
 
 	if [ -n ${SES_LABEL} ];then
 
+		echo "${sub_fmriprep_anat_dir}/${SUB}${_SES}_desc-aseg_dseg.nii.gz"
 		# Sometimes if a session label is specified, the anat could be in the ses folder or the top folder
 		# Look for anatomical file first in session directory, and then in anat directory
 		# Check where aseg is
-		if [ -f "${sub_fmriprep_ses_dir}/anat/${SUB}_${SES}_desc-aseg_dseg.nii.gz" ];then #if aseg is in session directory
-			aseg="${sub_fmriprep_ses_dir}/anat/${SUB}_${SES}_desc-aseg_dseg.nii.gz"
+		if [ -f "${sub_fmriprep_ses_dir}anat/${SUB}${_SES}_desc-aseg_dseg.nii.gz" ];then #if aseg is in session directory
+			ASEG="${sub_fmriprep_ses_dir}anat/${SUB}${_SES}_desc-aseg_dseg.nii.gz"
 			echo "Using sub-cortical segmentation from ${sub_fmriprep_ses_dir}/anat"			
 
 		elif [ -f "${SUB_FMRIPREP_DIR}/anat/${SUB}_desc-aseg_dseg.nii.gz" ];then #if aseg is in anat directory
-			aseg="${SUB_FMRIPREP_DIR}/anat/${SUB}_desc-aseg_dseg.nii.gz"			
+			ASEG="${SUB_FMRIPREP_DIR}/anat/${SUB}_desc-aseg_dseg.nii.gz"			
 			echo "Using sub-cortical segmentation from ${SUB_FMRIPREP_DIR}/anat"
 
-		else 
+		else
+			
 			echo "Not using sub-cortical segmentation. None found."
 
 		fi
 			
 
 		# Check where T1w is
-		if [ -f "${sub_fmriprep_ses_dir}/anat/${SUB}_${SES}_desc-preproc_T1w.nii.gz" ];then
-			T1W="${sub_fmriprep_ses_dir}/anat/${SUB}_${SES}_desc-preproc_T1w.nii.gz"
+		
+		if [ -f "${sub_fmriprep_ses_dir}anat/${SUB}${_SES}_desc-preproc_T1w.nii.gz" ];then
+			T1W="${sub_fmriprep_ses_dir}anat/${SUB}${_SES}_desc-preproc_T1w.nii.gz"
 			echo "Using T1w image from ${sub_fmriprep_ses_dir}/anat"
 
 		elif [ -f "${SUB_FMRIPREP_DIR}/anat/${SUB}_desc-preproc_T1w.nii.gz" ];then
@@ -365,8 +407,8 @@ lesion_map_with_fmriprep(){
 
 
 			# Check where T1w brain mask is
-		if [ -f "${sub_fmriprep_ses_dir}/anat/${SUB}_${SES}_desc-brain_mask.nii.gz" ];then
-			T1W_BRAIN_MASK="${sub_fmriprep_ses_dir}/anat/${SUB}_${SES}_desc-brain_mask.nii.gz" 
+		if [ -f "${sub_fmriprep_ses_dir}anat/${SUB}${_SES}_desc-brain_mask.nii.gz" ];then
+			T1W_BRAIN_MASK="${sub_fmriprep_ses_dir}anat/${SUB}${_SES}_desc-brain_mask.nii.gz" 
 			echo "Using T1w brain mask from ${sub_fmriprep_ses_dir}/anat"
 
 		elif [ -f "${SUB_FMRIPREP_DIR}/anat/${SUB}_desc-brain_mask.nii.gz" ];then
@@ -392,6 +434,7 @@ lesion_map_with_fmriprep(){
 	####################################
 	#FUNCTION BLOCK
 	####################################	
+	unbias_flair
 	extract_flair_brain_using_t1
 	find_candidate_lesions
 	build_initial_lesionmap
@@ -406,15 +449,49 @@ lesion_map_with_fmriprep(){
 lesion_map_with_T1w() {
 
 	
+	echo "Not using sub-cortical segmentation from fmriprep."
 	
-	# TODO Set names for locations of T1w image
-	# Mind the session
+	if [ -n ${SES_LABEL} ];then
 
+		
+		# Check where T1w is
+		
+		if [ -f "${BIDS_DIR}/${SUB}/${dirSES}anat/${SUB}${_SES}_T1w.nii.gz" ];then
+			T1W="${BIDS_DIR}/${SUB}/${dirSES}anat/${SUB}${_SES}_T1w.nii.gz"
+			echo "Using T1w image from ${BIDS_DIR}/${SUB}/${dirSES}anat/"
+
+		elif [ -f "${BIDS_DIR}/${SUB}/anat/${SUB}_T1w.nii.gz" ];then
+			T1W="${BIDS_DIR}/${SUB}/anat/${SUB}_T1w.nii.gz"
+			echo "Using T1w image from ${BIDS_DIR}/${SUB}/anat"
+		else
+			echo "Not using T1w image. None found."
+		fi
+
+				
+	else #just look in anat directory if session isn't specified
+
+		if [ -f "${BIDS_DIR}/${SUB}/anat/${SUB}_T1w.nii.gz" ];then		
+			T1W="${BIDS_DIR}/${SUB}/anat/${SUB}_T1w.nii.gz"
+			echo "Using T1w image from ${BIDS_DIR}/${SUB}/anat"
+
+		else
+			echo "Couldn't find any T1w images following BIDS conventions"
+		
+		fi
+
+
+
+	fi # ses_label
+
+
+	echo "T1w brain mask will need to be extracted using FSL BET"
 
 	####################################
 	#FUNCTION BLOCK
 	####################################	
-	#TODO extract_t1_brain	
+	unbias_t1
+	unbias_flair
+	extract_t1_brain	
 	extract_flair_brain_using_t1
 	find_candidate_lesions
 	build_initial_lesionmap
@@ -427,13 +504,12 @@ lesion_map_with_T1w() {
 lesion_map_with_FLAIR_only() {
 
 
-	#TODO Write names
-	# Mind the session
-
 	####################################
 	#FUNCTION BLOCK
 	####################################	
-	#TODO extract_flair_brain_using_flair_only	
+	extract_flair_brain_using_flair_only
+	unbias_flair
+	extract_flair_brain_using_flair_only
 	find_candidate_lesions
 	build_initial_lesionmap
 	clean_initial_lesionmap
@@ -442,8 +518,31 @@ lesion_map_with_FLAIR_only() {
 
 }
 
+unbias_t1(){
+	# bias field correction if not done in fmriprep
+	echo "doing bias field correction for T1w image"
+	unbias ${T1W} ${T1W_PREPROC}
+}
 
+unbias_flair(){
+	# bias field correction for FLAIR image
+	echo "doing bias field correction for FLAIR image"
+	unbias ${FLAIR} ${FLAIR_PREPROC}
+}
 
+extract_t1_brain() {
+
+	echo "extracting T1 brain from T1w image"
+
+	T1W_BRAIN_MASK=${SUB_OUTPUT_DIR}${SUB}${_SES}_space-T1w_desc-brain_mask.nii.gz
+	bet_nw ${T1W_PREPROC} ${T1W_BRAIN_MASK} -R -d -s -m -f 0.4 -g -0.2
+}
+
+extract_flair_brain_using_flair_only() {
+	echo "extracting FLAIR brain"
+	bet_nw ${FLAIR_PREPROC} ${FLAIR_BRAIN} -R -d -s -f 0.4 -g -0.2
+	# no -m option becuase I don't need a mask?
+}
 		
 extract_flair_brain_using_t1() {
 
@@ -451,16 +550,16 @@ extract_flair_brain_using_t1() {
 
 	#Get FLAIR brain image	
 		
-	${FSLDIR}/bin/flirt -in ${FLAIR} -ref ${T1W} -omat ${FLAIR_TO_T1} -out ${FLAIR_IN_T1}
+	${FSLDIR}/bin/flirt -in "${FLAIR_PREPROC}" -ref "${T1W}" -omat "${FLAIR_TO_T1}" -out "${FLAIR_IN_T1}"
 
-	${FSLDIR}/bin/convert_xfm -omat ${T1_TO_FLAIR} -inverse ${FLAIR_TO_T1}
+	${FSLDIR}/bin/convert_xfm -omat "${T1_TO_FLAIR}" -inverse "${FLAIR_TO_T1}"
 
-	${FSLDIR}/bin/flirt -applyxfm -init ${T1_TO_FLAIR} -in ${T1W_BRAIN_MASK} -ref ${FLAIR} -out ${FLAIR_BRAIN_MASK}
+	${FSLDIR}/bin/flirt -applyxfm -init "${T1_TO_FLAIR}" -in "${T1W_BRAIN_MASK}" -ref "${FLAIR_PREPROC}" -out "${FLAIR_BRAIN_MASK}"
 
-	${FSLDIR}/bin/fslmaths ${FLAIR}-mas ${FLAIR_BRAIN_MASK} ${FLAIR_BRAIN}
+	${FSLDIR}/bin/fslmaths "${FLAIR_PREPROC}" -mas "${FLAIR_BRAIN_MASK}" "${FLAIR_BRAIN}"
 
-	
 	echo "Generated ${FLAIR_BRAIN}"
+	log_time "Generated ${FLAIR_BRAIN}"
 }		
 
 
@@ -468,14 +567,14 @@ find_candidate_lesions() {
 	
 	echo "find_candidate_lesions"
 
-	local fast_output_base="${SUB_OUTPUT_DIR}/${SUB}_${SES}_desc-brain_FLAIR"
-	local temp_flair_nonbrain_mask="${SUB_OUTPUT_DIR}/${SUB}_${SES}_desc-brain_FLAIR_seg_1.nii.gz"
+	local fast_output_base="${SUB_OUTPUT_DIR}/${SUB}${_SES}_desc-brain_FLAIR"
+	local temp_flair_nonbrain_mask="${SUB_OUTPUT_DIR}/${SUB}${_SES}_desc-brain_FLAIR_seg_1.nii.gz"
 
 	# brain / nonbrain segmentation
 	# hyperintensities are classified as nonbrain
 
 	if [ ! -e "${fast_output_base}_seg_1.nii.gz" ]; then 
-		${FSLDIR}/bin/fast -n 2 -t 2 -g -p -B -o ${fast_output_base} ${FLAIR_BRAIN}
+		${FSLDIR}/bin/fast -n 2 -t 2 -g -p -B -o "${fast_output_base}" "${FLAIR_BRAIN}"
 
 		log_time "FSL_FAST_complete"		
 
@@ -486,12 +585,13 @@ find_candidate_lesions() {
 		#t2_brain_mask="t2_seg_0.nii.gz"
 		#t2_brain="t2_restore.nii.gz"
 
-	if [ ! -e ${TEMP_FLAIR_NONBRAIN} ]; then
-		${FSLDIR}/bin/fslmaths ${FLAIR_BRAIN} -mas ${temp_flair_nonbrain_mask} ${TEMP_FLAIR_NONBRAIN}
+	if [ ! -e "${TEMP_FLAIR_NONBRAIN}" ]; then
+		${FSLDIR}/bin/fslmaths "${FLAIR_BRAIN}" -mas "${temp_flair_nonbrain_mask}" "${TEMP_FLAIR_NONBRAIN}"
 	fi
 
 	echo "${TEMP_FLAIR_NONBRAIN} generated"
 
+	remove_local_temp_files
 }		
 		
 		
@@ -500,6 +600,8 @@ build_initial_lesionmap() {
 	# Now, T2 FLAIR nonbrain image includes only very dark nonbrain and very bright hyperintensities, and nothing in-between.
 	# It is very easy to find a threshold to separate these using the histogram.
 	# The following code accomplishes this by iteratively removing the first div until an empty div is found.
+
+	echo "building initial lesionmap"
 
 	local numdivs=50
 	local range=$(fslstats "${TEMP_FLAIR_NONBRAIN}" -R)
@@ -513,7 +615,7 @@ build_initial_lesionmap() {
 	local temp_flair_nonbrain_intensities="${SUB_OUTPUT_DIR}/flair_nonbrain_intensities.txt"
 	local temp_flair_nonbrain_histogram_both_axis="${SUB_OUTPUT_DIR}/flair_nonbrain_histogram_both_axis.txt" 
 	
-	TEMP_FLAIR_NONBRAIN_THR="${SUB_OUTPUT_DIR}/${SUB}_${SES}_desc-nonbrain_thr-${thresh}_FLAIR.nii.gz"
+	
 
 
 	${FSLDIR}/bin/fslstats "${TEMP_FLAIR_NONBRAIN}" -H "${numdivs}" "${min}" "${max}" > "${temp_flair_nonbrain_histogram}" 
@@ -525,7 +627,6 @@ build_initial_lesionmap() {
 	rm -f "${temp_flair_nonbrain_intensities}" 
 
 	while [ "$(echo "scale=0; (${max} - ${intensity})/1" | bc)" -gt 0 ]; do	
-
 		intensity=$(echo "scale=6; ${intensity} + ${width}" | bc)
     		echo "${intensity}" >> "${temp_flair_nonbrain_intensities}"
 
@@ -533,19 +634,29 @@ build_initial_lesionmap() {
 
 	paste -d',' "${temp_flair_nonbrain_intensities}" "${temp_flair_nonbrain_histogram_nonzero}" > "${temp_flair_nonbrain_histogram_both_axis}"
 
-	while [ "$(echo ${histogram} | cut -d " " -f 1 | cut -d "." -f 1)" -gt 0 ]; do  
+	while [[ "$(echo ${histogram} | cut -d " " -f 1 | cut -d "." -f 1)" -gt 0 ]]; do  
 		
-    		histogram=$(echo "${histogram}" | cut -d " " -f 2-)
+			test=$(echo ${histogram} | cut -d " " -f 1 | cut -d "." -f 1)
+			echo $test
+			echo ${histogram}
+
+    		histogram=$(echo ${histogram} | cut -d " " -f 2-)
+			echo $histogram
+
     		div=`expr "${div}" + 1`
+			echo "div is ${div}"
+			echo "width is ${width}"
 
 	done
 
-	local thresh=$(echo "${div}" * "${width}" | bc)
-
-	echo "histogram threshold to differentiate lesions: ${thresh}"
+	THRESH=$(echo "${div} * ${width}" | bc)
 
 	
-	${FSLDIR}/bin/fslmaths "${TEMP_FLAIR_NONBRAIN}" -thr "${thresh}" "${TEMP_FLAIR_NONBRAIN_THR} "
+	echo "histogram threshold to differentiate lesions: ${THRESH}"
+
+	TEMP_FLAIR_NONBRAIN_THR="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-nonbrain_thr-${THRESH}_FLAIR.nii.gz"
+	
+	${FSLDIR}/bin/fslmaths "${TEMP_FLAIR_NONBRAIN}" -thr "${THRESH}" "${TEMP_FLAIR_NONBRAIN_THR}"
 
 	cp "${TEMP_FLAIR_NONBRAIN_THR}" "${FLAIR_LESIONMAP}"
 
@@ -553,7 +664,7 @@ build_initial_lesionmap() {
 
 	echo "Initial flair lesionmap guess has been made: ${FLAIR_LESIONMAP}"
 
-	#TODO Remove local temp files
+	remove_local_temp_files
 
 }
 		
@@ -580,15 +691,17 @@ do_fsl_fast_again() {
 	# this makes identification of the lesions themselves less sensitive but more specific
 	if [ "$DO2FAST" = 1 ]; then
 		
+		#TODO: THRESH depends on the last step being run
 		echo "Doing additional step of FSL FAST to remove darker nonlesion midbrain structures."
 		echo "This makes identification of lesions less sensitive but more specific."
 
-		local temp_fast2_output_base="${SUB_OUTPUT_DIR}/sub-${SUB}_ses-${SES}_desc-nonbrain_thr-${thresh}_FLAIR"
+		local temp_fast2_output_base="${SUB_OUTPUT_DIR}/${SUB}${_SES}_desc-nonbrain_thr-${THRESH}_FLAIR"
 
     		${FSLDIR}/bin/fast -p -n 2 -g -N -o "${temp_fast2_output_base}" "${FLAIR_LESIONMAP}" 
     		
 		#Update and overwrite the current lesionmap
-		cp "${fast2_output_base}_seg_1.nii.gz" "${FLAIR_LESIONMAP}"
+		#cp "${temp_fast2_output_base}_seg_1.nii.gz" "${FLAIR_LESIONMAP}"
+		fslmaths ${FLAIR_LESIONMAP} -mas "${temp_fast2_output_base}_seg_1.nii.gz" ${FLAIR_LESIONMAP}
 
 	else
 		echo "Skipping additional step of FSL FAST."
@@ -597,17 +710,12 @@ do_fsl_fast_again() {
 	fi
 
 	log_time "secondary_fast_complete"
+
+	remove_local_temp_files
 }
 
 
 apply_white_matter_mask() {
-
-
-		MNI_TO_FLAIR="${SUB_OUTPUT_DIR}/sub-${SUB}_ses-${SES}_from-MNI_to-FLAIR_mode-image_xfm.mat"
-		MNI_TO_FLAIR_WARP="${SUB_OUTPUT_DIR}/sub-${SUB}_ses-${SES}_from-MNI_to-FLAIR_mode-image_warp.nii.gz"
-		MNI_IN_FLAIR_WARPED="${SUB_OUTPUT_DIR}/sub-${SUB}_ses-${SES}_space-FLAIR_MNI152NLin6genAsym.nii.gz"
-
-
 
 		#TODO If we have a T1w brain, it would be better to use that for the registration and then concat the transforms
 
@@ -625,7 +733,7 @@ apply_white_matter_mask() {
 
 		#TODO Even in this section, it seems like we ought to move in the other direction and apply and inverse warp
     		if [ ! -e "${MNI_TO_FLAIR_WARP}}" ]; then
-        		${FSLDIR}/bin/fnirt --in="${NWTOOLS}/icbm152_flair_brain" --ref="${FLAIR_BRAIN}" --aff=${MNI_TO_FLAIR} --cout=${MNI_TO_FLAIR_WARP}} --iout=${MNI_IN_FLAIR_WARPED}
+        		${FSLDIR}/bin/fnirt --in="${NWTOOLS}/icbm152_flair_brain" --ref="${FLAIR_BRAIN}" --aff=${MNI_TO_FLAIR} --cout=${MNI_TO_FLAIR_WARP} --iout=${MNI_IN_FLAIR_WARPED}
         
 			log_time "MNI_warp_complete"
     		fi
@@ -636,45 +744,52 @@ apply_white_matter_mask() {
 			echo "Applying white matter mask from MNI average brain."
 			echo "This white matter masking isn't perfect, but lesions are not identified as white matter in native space using typical segmentation."
 
-			local temp_flair_wm="${SUB_OUTPUT_DIR}/${SUB}_${SES}_space-FLAIR_label-WM_MNI152NLin6genAsym.nii.gz"
+			local temp_flair_wm="${SUB_OUTPUT_DIR}${SUB}${_SES}_space-FLAIR_label-WM_MNI152NLin6genAsym.nii.gz"
+
+			local flair_wm_thr="${SUB_OUTPUT_DIR}${SUB}${_SES}_space-FLAIR_label-WM_thr-${WMTHR}_MNI152NLin6genAsym.nii.gz"
+			local temp_flair_lesionmap_wm="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-lesionmap_thr-wm_FLAIR.nii.gz"
+			TEMP_FLAIR_LESIONMAP_FILLED="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-lesionmap_filled_FLAIR.nii.gz"
+			
 
     		if [ `imtest ${temp_flair_wm}` = 0 ]; then
 
-			
-			local flair_wm_thr="${SUB_OUTPUT_DIR}/${SUB}_${SES}_space-FLAIR_label-WM_thr-${WMTHR}_MNI152NLin6genAsym.nii.gz"
-			local temp_flair_lesionmap_wm="${SUB_OUTPUT_DIR}/${SUB}_${SES}_desc-lesionmap_thr-wm_FLAIR.nii.gz"
-			local temp_flair_lesionmap_filled="${SUB_OUTPUT_DIR}/${SUB}_${SES}_desc-lesionmap_filled_FLAIR.nii.gz"
 
-        	${FSLDIR}/bin/applywarp -i "${NWTOOLS}/icbm152_whitematter_mask" -o "${temp_flair_wm}" -r "${FLAIR_BRAIN}" -w "${MNI_TO_FLAIR_WARP}}"
+        		${FSLDIR}/bin/applywarp -i "${NWTOOLS}/icbm152_whitematter_mask" -o "${temp_flair_wm}" -r "${FLAIR_BRAIN}" -w "${MNI_TO_FLAIR_WARP}"
         
-			log_time "applywarp_to_whitematter_mask_complete"
+				log_time "applywarp_to_whitematter_mask_complete"
 
     		fi
 
     		${FSLDIR}/bin/fslmaths "${temp_flair_wm}" -thr "${WMTHR}" -bin -fillh "${flair_wm_thr}"
+
+
     		${FSLDIR}/bin/fslmaths ${FLAIR_LESIONMAP} -mas ${flair_wm_thr} ${temp_flair_lesionmap_wm}
     
  			log_time "wm_thresholding_complete"
-    	
+			
     		# fill back any lesions that may have been partially removed by masking
-    		if [ `imtest ${temp_flair_lesionmap_filled}` = 0 ]; then 
-        		${NWTOOLS}/fill_nw ${temp_flair_lesionmap_wm} ${FLAIR_LESIONMAP} ${temp_flair_lesionmap_filled}
+    		if [ `imtest ${TEMP_FLAIR_LESIONMAP_FILLED}` = 0 ]; then 
+
+
+        		${NWTOOLS}/fill_nw ${temp_flair_lesionmap_wm} ${FLAIR_LESIONMAP} ${TEMP_FLAIR_LESIONMAP_FILLED}
+				echo "Finished fill_nw step"
         
 
         		log_time "fill_back_partially_masked_lesions"
     		fi
 	
 			#Update lesionmap with white matter mask
-			cp ${temp_flair_lesionmap_filled} ${FLAIR_LESIONMAP}
+			
+			cp ${TEMP_FLAIR_LESIONMAP_FILLED} ${FLAIR_LESIONMAP}
 
 			echo "Done applying white matter mask."
 
-		fi
+		else
+			echo "Not applying any white matter masking."
 
-	else
-		echo "Not applying any white matter masking."
+		fi # WMTHR != -1
 
-	fi # WMTHR != -1
+		remove_local_temp_files
 
 }
 
@@ -688,19 +803,19 @@ clean_up_midline() {
 		
     	if [ ! $MIDLINE = -1 ]; then
 
-		local temp_yz_mid="${SUB_OUTPUT_DIR}/sub-${SUB}_ses-${SES}_desc-yzmid_mask.nii.gz"	
-		local temp_yz_pad="${SUB_OUTPUT_DIR}/sub-${SUB}_ses-${SES}_desc-yzpad_mask.nii.gz"
-		local temp_midline_img="${SUB_OUTPUT_DIR}/sub-${SUB}_ses-${SES}_desc-midline_mask.nii.gz"
-		local temp_midline_flair="${SUB_OUTPUT_DIR}/sub-${SUB}_ses-${SES}_space-FLAIR_desc-midline_mask.nii.gz"
-		local temp_flair_lesionmap_midline="${SUB_OUTPUT_DIR}/sub-${SUB}_ses-${SES}_desc-lesionmap_midline_FLAIR.nii.gz"
-		local temp_midmax_img="${SUB_OUTPUT_DIR}/sub-${SUB}_ses-${SES}_desc-midmax_mask.nii.gz"
-		local temp_midmax_flair="${SUB_OUTPUT_DIR}/sub-${SUB}_ses-${SES}_space-FLAIR_desc-midmax_mask.nii.gz"
-		local temp_flair_lesionmap_midmax="${SUB_OUTPUT_DIR}/sub-${SUB}_ses-${SES}_desc-lesionmap_midmax_FLAIR.nii.gz"
-		local temp_flair_lesionmap_midline_inv="${SUB_OUTPUT_DIR}/sub-${SUB}_ses-${SES}_desc-lesionmap_midlineinv_FLAIR.nii.gz"
+			local temp_yz_mid="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-yzmid_mask.nii.gz"	
+			local temp_yz_pad="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-yzpad_mask.nii.gz"
+			local temp_midline_img="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-midline_mask.nii.gz"
+			local temp_midline_flair="${SUB_OUTPUT_DIR}${SUB}${_SES}_space-FLAIR_desc-midline_mask.nii.gz"
+			local temp_flair_lesionmap_midline="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-lesionmap_midline_FLAIR.nii.gz"
+			local temp_midmax_img="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-midmax_mask.nii.gz"
+			local temp_midmax_flair="${SUB_OUTPUT_DIR}${SUB}${_SES}_space-FLAIR_desc-midmax_mask.nii.gz"
+			local temp_flair_lesionmap_midmax="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-lesionmap_midmax_FLAIR.nii.gz"
+			local temp_flair_lesionmap_midline_inv="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-lesionmap_midlineinv_FLAIR.nii.gz"
 
         	# First, create midline mask
-		echo "Creating midline mask"
-        	local midline_width=$(echo "scale=0; ($MIDLINE * 2) + 1" | bc)
+			echo "Creating midline mask"
+       		local midline_width=$(echo "scale=0; ($MIDLINE * 2) + 1" | bc)
         	${FSLDIR}/bin/fslcreatehd $midline_width 233 189 1 1 1 1 1 0 0 0 2 ${temp_yz_mid}
         	${FSLDIR}/bin/fslmaths ${temp_yz_mid} -add 1 ${temp_yz_mid}
         	local pad=$(echo "scale=0; (197 - $midline_width)/2" | bc)
@@ -708,9 +823,24 @@ clean_up_midline() {
         	${FSLDIR}/bin/fslmerge -x ${temp_midline_img} ${temp_yz_pad} ${temp_yz_mid} ${temp_yz_pad}
 
         	# Now, use the midline mask to select and fill midline lesions, then remove them from final mask
-        	${FSLDIR}/bin/applywarp -i ${temp_midline_img} -o ${temp_midline_flair} -r ${FLAIR_BRAIN} -w ${MNI_TO_FLAIR_WARP}}
+        	${FSLDIR}/bin/applywarp -i ${temp_midline_img} -o ${temp_midline_flair} -r ${FLAIR_BRAIN} -w ${MNI_TO_FLAIR_WARP}
+			
         	${FSLDIR}/bin/fslmaths ${temp_midline_flair} -thr 0.5 ${temp_midline_flair}
+
+			# Check if TEMP_FLAIR_NONBRAIN exists. This variable needs to be defined after determining the histogram threshold for differentiating lesions.
+			# It may not be set if running functions individually.
+			if [ -z ${TEMP_FLAIR_NONBRAIN_THR+x} ]; then
+				# Use a wildcard substitution if the histogram threshold is unknown
+				TEMP_FLAIR_NONBRAIN_THR="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-nonbrain_thr-*_FLAIR.nii.gz"
+				echo "Setting TEMP_FLAIR_NONBRAIN_THR to ${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-nonbrain_thr-*_FLAIR.nii.gz"
+			fi
+
+			echo "TEMP_FLAIR_NONBRAIN_THR is ${TEMP_FLAIR_NONBRAIN_THR}"
+			echo "temp_midline_flair is ${temp_midline_flair}"
+			echo "temp_flair_lesionmap_midline is ${temp_flair_lesionmap_midline}"
+
         	${FSLDIR}/bin/fslmaths ${TEMP_FLAIR_NONBRAIN_THR} -mas ${temp_midline_flair} ${temp_flair_lesionmap_midline}
+			
 
         	if [ ! $midmax = -1 ]; then
             		# As above, first step is to create a midline mask
@@ -720,7 +850,7 @@ clean_up_midline() {
             		pad=$(echo "scale=0; (197 - $midline_width)/2" | bc)
             		${FSLDIR}/bin/fslcreatehd $pad 233 189 1 1 1 1 1 0 0 0 2 ${temp_yz_pad}
             		${FSLDIR}/bin/fslmerge -x ${temp_midmax_img} ${temp_yz_pad} ${temp_yz_mid} ${temp_yz_pad}
-            		${FSLDIR}/bin/applywarp -i ${temp_midmax_img} -o ${temp_midmax_flair} -r ${FLAIR} -w ${MNI_TO_FLAIR_WARP}}
+            		${FSLDIR}/bin/applywarp -i ${temp_midmax_img} -o ${temp_midmax_flair} -r ${FLAIR} -w ${MNI_TO_FLAIR_WARP}
             		${FSLDIR}/bin/fslmaths ${temp_midmax_flair} -thr 0.5 ${temp_midmax_flair}
             		${FSLDIR}/bin/fslmaths ${TEMP_FLAIR_NONBRAIN_THR} -mas ${temp_midmax_flair} ${temp_flair_lesionmap_midmax}
         	else
@@ -735,13 +865,20 @@ clean_up_midline() {
 			log_time "midline_mask_fill_nw_complete"
 
         	${FSLDIR}/bin/fslmaths ${temp_flair_lesionmap_midline} -binv ${temp_flair_lesionmap_midline_inv}
-        	${FSLDIR}/bin/fslmaths ${flair_lesionmap_filled} -mas ${temp_flair_lesionmap_midline_inv} ${FLAIR_LESIONMAP}
+
+			if [ -z ${TEMP_FLAIR_LESIONMAP_FILLED+x} ]; then
+				# Use a wildcard substitution if the histogram threshold is unknown
+				TEMP_FLAIR_LESIONMAP_FILLED="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-lesionmap_filled_FLAIR.nii.gz"
+			fi
+
+        	${FSLDIR}/bin/fslmaths ${TEMP_FLAIR_LESIONMAP_FILLED} -mas ${temp_flair_lesionmap_midline_inv} ${FLAIR_LESIONMAP}
     	else
-        	${FSLDIR}/bin/immv ${flair_lesionmap_filled} ${FLAIR_LESIONMAP}
+        	${FSLDIR}/bin/immv ${TEMP_FLAIR_LESIONMAP_FILLED} ${FLAIR_LESIONMAP}
     	fi
 
 	log_time "finished cleaning up midline"
 
+	remove_local_temp_files
 
 }
 
@@ -752,44 +889,62 @@ use_aseg_mask() {
 
 			echo "Using ventricle masks from fmriprep"
 		
-			local temp_ventricle_mask_t1="${SUB_OUTPUT_DIR}/sub-${SUB}_ses-${SES}_space-T1w_desc-ventricle_mask.nii.gz"
-			local temp_ventricle_mask_flair="${SUB_OUTPUT_DIR}/sub-${SUB}_ses-${SES}_space-FLAIR_desc-ventricle_mask.nii.gz"
-			local temp_caudate_mask_t1="${SUB_OUTPUT_DIR}/sub-${SUB}_ses-${SES}_space-T1w_desc-caudate_mask.nii.gz"
-			local temp_caudate_mask_flair="${SUB_OUTPUT_DIR}/sub-${SUB}_ses-${SES}_space-FLAIR_desc-caudate_mask.nii.gz"
-			local temp_flair_lesionmap_mask="${SUB_OUTPUT_DIR}/sub-${SUB}_ses-${SES}_space-FLAIR_desc-lesionmap_mask.nii.gz"
-			local temp_not_real_lesions="${SUB_OUTPUT_DIR}/temp_not_real_lesions_mask.nii.gz"
-			local temp_overlap_periventricular_lesions=
-			local temp_overlap_periventricular_lesions_step=
-			local temp_overlap_periventricular_lesions_step1=
-			local temp_left_lat_ventricle=sub-${SUB}_ses-${SES}_desc-asegLeftLatVentricle_dseg.nii.gz
-			local temp_left_inf_lat_ventricle=sub-${SUB}_ses-${SES}_desc-asegLeftInfLatVentricle_dseg.nii.gz
-			local temp_right_lat_ventricle=sub-${SUB}_ses-${SES}_desc-asegRightLatVentricle_dseg.nii.gz
-			local temp_right_inf_lat_ventricle=sub-${SUB}_ses-${SES}_desc-asegRightInfLatVentricle_dseg.nii.gz
+			local temp_left_lat_ventricle="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-asegLeftLatVentricle_dseg.nii.gz"
+			local temp_left_inf_lat_ventricle="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-asegLeftInfLatVentricle_dseg.nii.gz"
+			local temp_right_lat_ventricle="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-asegRightLatVentricle_dseg.nii.gz"
+			local temp_right_inf_lat_ventricle="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-asegRightInfLatVentricle_dseg.nii.gz"
+			local temp_ventricle_mask_t1="${SUB_OUTPUT_DIR}${SUB}${_SES}_space-T1w_desc-ventricle_mask.nii.gz"
 
-			PERIVENTRICULAR_LESIONMAP_MASK="${SUB_OUTPUT_DIR}/sub-${SUB}_ses-${SES}_space-FLAIR_desc-periventricularlesionmap_mask.nii.gz"
-			DEEP_WHITE_MATTER_LESIONMAP_MASK="${SUB_OUTPUT_DIR}/sub-${SUB}_ses-${SES}_space-FLAIR_desc-deepwhitematterlesionmap_mask.nii.gz"
+			local temp_left_caudate="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-asegLeftCaudate_dseg.nii.gz"
+			local temp_right_caudate="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-asegRightCaudate_dseg.nii.gz"
+			local temp_caudate_mask_t1="${SUB_OUTPUT_DIR}${SUB}${_SES}_space-T1w_desc-caudate_mask.nii.gz"
+
+			local temp_ventricle_mask_flair="${SUB_OUTPUT_DIR}${SUB}${_SES}_space-FLAIR_desc-ventricle_mask.nii.gz"
+			local temp_caudate_mask_flair="${SUB_OUTPUT_DIR}${SUB}${_SES}_space-FLAIR_desc-caudate_mask.nii.gz"
+
+			local temp_flair_lesionmap_mask="${SUB_OUTPUT_DIR}${SUB}${_SES}_space-FLAIR_desc-lesionmap_mask.nii.gz"
+
+			local temp_not_real_lesions="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-NotReaLesions_mask.nii.gz"
+
+			local temp_ventricle_mask_step="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-TempVentricleStep_maski.nii.gz"
+			 
+			local temp_overlap_periventricular_lesions="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-TempOverlapPeriventricularLesions.nii.gz"
+			local temp_periventricular_mask_step="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-TempPeriventricularStep_mask.nii.gz"
+			local temp_overlap_periventricular_lesions_step="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-TempOverlapPeriventricularLesionsStep_mask.nii.gz"
+			local temp_change_in_lesions="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-TempChangePeriventricularLesions_mask.nii.gz"
+
+			#local temp_overlap_periventricular_lesions_mask_step="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-TempOverlapPeriventricularLesionsStep_mask.nii.gz"
+			#local temp_overlap_periventricular_lesions_mask_step2="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-TempOverlapPeriventricularLesionsStep2_mask.nii.gz"
+			
+			PERIVENTRICULAR_LESIONMAP_MASK="${SUB_OUTPUT_DIR}${SUB}${_SES}_space-FLAIR_desc-periventricularlesionmap_mask.nii.gz"
+			DEEP_WHITE_MATTER_LESIONMAP_MASK="${SUB_OUTPUT_DIR}${SUB}${_SES}_space-FLAIR_desc-deepwhitematterlesionmap_mask.nii.gz"
 			
 			
 			echo "Separating periventricular lesions from deep white matter lesions"
-
-			${FSLDIR}/bin/fslmaths ${ASEG} -thr 4 -uthr 4 ${SUB_OUTPUT_DIR}/temp_left_lat_vent
-			${FSLDIR}/bin/fslmaths ${ASEG} -thr 5 -uthr 5 ${SUB_OUTPUT_DIR}/temp_left_inf_lat_vent
-			${FSLDIR}/bin/fslmaths ${ASEG} -thr 43 -uthr 43 ${SUB_OUTPUT_DIR}/temp_right_lat_vent
-			${FSLDIR}/bin/fslmaths ${ASEG} -thr 44 -uthr 44 ${SUB_OUTPUT_DIR}/temp_right_inf_lat_vent
+			echo "${ASEG}"
+		
 			
-			${FSLDIR}/bin/fslmaths ${SUB_OUTPUT_DIR}/temp_left_lat_vent -add ${SUB_OUTPUT_DIR}/temp_left_inf_lat_vent -add ${SUB_OUTPUT_DIR}/temp_right_lat_vent -add ${SUB_OUTPUT_DIR}/temp_right_inf_lat_vent -bin ${temp_ventricle_mask_t1}
+			${FSLDIR}/bin/fslmaths ${ASEG} -thr 4 -uthr 4 ${temp_left_lat_ventricle}
+			${FSLDIR}/bin/fslmaths ${ASEG} -thr 5 -uthr 5 ${temp_left_inf_lat_ventricle}
+			${FSLDIR}/bin/fslmaths ${ASEG} -thr 43 -uthr 43 ${temp_right_lat_ventricle}
+			${FSLDIR}/bin/fslmaths ${ASEG} -thr 44 -uthr 44 ${temp_right_inf_lat_ventricle}
 
+			
+			${FSLDIR}/bin/fslmaths ${temp_left_lat_ventricle} -add ${temp_left_inf_lat_ventricle} \
+			 -add ${temp_right_lat_ventricle} -add ${temp_right_inf_lat_ventricle} -bin ${temp_ventricle_mask_t1}
+
+			
 			#Prep caudate as well from aseg
 			
-			${FSLDIR}/bin/fslmaths ${ASEG} -thr 11 -uthr 11 ${SUB_OUTPUT_DIR}/temp_left_caudate
-			${FSLDIR}/bin/fslmaths ${ASEG} -thr 50 -uthr 50 ${SUB_OUTPUT_DIR}/temp_right_caudate
+			${FSLDIR}/bin/fslmaths ${ASEG} -thr 11 -uthr 11 ${temp_left_caudate}
+			${FSLDIR}/bin/fslmaths ${ASEG} -thr 50 -uthr 50 ${temp_right_caudate}
 			
-			${FSLDIR}/bin/fslmaths ${SUB_OUTPUT_DIR}/temp_left_caudate -add ${SUB_OUTPUT_DIR}/temp_right_caudate -bin ${temp_caudate_mask_t1}
+			${FSLDIR}/bin/fslmaths ${temp_left_caudate} -add ${temp_right_caudate} -bin ${temp_caudate_mask_t1}
 			
 
 			# Bring in the aseg, which is in T1w space, into FLAIR space
-			${FSLDIR}/bin/flirt -applyxfm -init ${T1_TO_FLAIR} -in ${temp_ventricle_mask_t1} -ref ${flair_brain} -out ${temp_ventricle_mask_flair} -interp nearestneighbour
-			${FSLDIR}/bin/flirt -applyxfm -init ${T1_TO_FLAIR} -in ${temp_caudate_mask_t1} -ref ${flair_brain} -out ${temp_caudate_mask_flair} -interp nearestneighbour
+			${FSLDIR}/bin/flirt -applyxfm -init ${T1_TO_FLAIR} -in ${temp_ventricle_mask_t1} -ref ${FLAIR_BRAIN} -out ${temp_ventricle_mask_flair} -interp nearestneighbour
+			${FSLDIR}/bin/flirt -applyxfm -init ${T1_TO_FLAIR} -in ${temp_caudate_mask_t1} -ref ${FLAIR_BRAIN} -out ${temp_caudate_mask_flair} -interp nearestneighbour
 
 
 			${FSLDIR}/bin/fslmaths ${FLAIR_LESIONMAP} -bin ${temp_flair_lesionmap_mask}
@@ -798,14 +953,14 @@ use_aseg_mask() {
 			
 
 			${FSLDIR}/bin/fslmaths ${temp_flair_lesionmap_mask} -mas ${temp_caudate_mask_flair} -mas ${temp_ventricle_mask_flair} -bin ${temp_not_real_lesions}
-			${FSLDIR}/bin/fslmaths ${temp_flair_lesionmap_mask} -sub ${temp_not_real_lesions} ${flair_lesionmap_mask2}
+			${FSLDIR}/bin/fslmaths ${temp_flair_lesionmap_mask} -sub ${temp_not_real_lesions} ${temp_flair_lesionmap_mask}
 			${FSLDIR}/bin/fslmaths ${FLAIR_LESIONMAP} -mas ${temp_flair_lesionmap_mask} ${FLAIR_LESIONMAP}
 			
 
 			# start building periventricular lesions here
-			${FSLDIR}/bin/fslmaths ${temp_ventricle_mask_flair} -kernel boxv 3 -dilM -bin "${SUB_OUTPUT_DIR}/temp_ventricle_mask_step.nii.gz"
+			${FSLDIR}/bin/fslmaths ${temp_ventricle_mask_flair} -kernel boxv 3 -dilM -bin ${temp_ventricle_mask_step}
 
-			${FSLDIR}/bin/fslmaths ${SUB_OUTPUT_DIR}/temp_ventricle_mask_step.nii.gz -mul ${temp_flair_lesionmap_mask} "${SUB_OUTPUT_DIR}/temp_overlap_periventricular_lesions.nii.gz"
+			${FSLDIR}/bin/fslmaths ${temp_ventricle_mask_step} -mul ${temp_flair_lesionmap_mask} ${temp_overlap_periventricular_lesions}
 
 			# After the first step, grow the lesion mask one voxel in every direction
 			# Check overlap with lesion map generated from lesion-mapping script
@@ -821,22 +976,22 @@ use_aseg_mask() {
 			## Begin loop
 			while [ $number_of_voxels -ne 0 ];do
 
-				${FSLDIR}/bin/fslmaths ${SUB_OUTPUT_DIR}/temp_overlap_periventricular_lesions.nii.gz -kernel boxv 3 -dilM ${SUB_OUTPUT_DIR}/temp_periventricular_mask_step.nii.gz
+				${FSLDIR}/bin/fslmaths ${temp_overlap_periventricular_lesions} -kernel boxv 3 -dilM ${temp_periventricular_mask_step}
 
-				${FSLDIR}/bin/fslmaths ${SUB_OUTPUT_DIR}/temp_periventricular_mask_step.nii.gz -mul ${temp_flair_lesionmap_mask} ${SUB_OUTPUT_DIR}/temp_overlap_periventricular_lesions_step.nii.gz
+				${FSLDIR}/bin/fslmaths ${temp_periventricular_mask_step} -mul ${temp_flair_lesionmap_mask} ${temp_overlap_periventricular_lesions_step}
 
-				${FSLDIR}/bin/fslmaths ${SUB_OUTPUT_DIR}/temp_overlap_periventricular_lesions_step.nii.gz -sub ${SUB_OUTPUT_DIR}/temp_overlap_periventricular_lesions.nii.gz ${SUB_OUTPUT_DIR}/temp_change_in_lesions.nii.gz
+				${FSLDIR}/bin/fslmaths ${temp_overlap_periventricular_lesions_step} -sub ${temp_overlap_periventricular_lesions} ${temp_change_in_lesions}
 
-				find_number_of_voxels=$(fslstats ${SUB_OUTPUT_DIR}/temp_change_in_lesions.nii.gz -V)
+				find_number_of_voxels=$(fslstats ${temp_change_in_lesions} -V)
 				number_of_voxels=$(echo "${find_number_of_voxels%\ * }")
 
 	
 				echo "The number of new voxels on this iteration was $number_of_voxels"
-				cp ${SUB_OUTPUT_DIR}/temp_overlap_periventricular_lesions_step.nii.gz ${SUB_OUTPUT_DIR}/temp_overlap_periventricular_lesions.nii.gz
+				cp ${temp_overlap_periventricular_lesions_step} ${temp_overlap_periventricular_lesions}
 
 			done # while loop
 
-			cp ${SUB_OUTPUT_DIR}/temp_overlap_periventricular_lesions.nii.gz ${PERIVENTRICULAR_LESIONMAP_MASK}
+			cp ${temp_overlap_periventricular_lesions} ${PERIVENTRICULAR_LESIONMAP_MASK}
 
 			${FSLDIR}/bin/fslmaths ${temp_flair_lesionmap_mask} -sub ${PERIVENTRICULAR_LESIONMAP_MASK} ${DEEP_WHITE_MATTER_LESIONMAP_MASK}
 
@@ -847,6 +1002,8 @@ use_aseg_mask() {
 		echo "The aseg segmentations from fmriprep do not exist."
 
 	fi #aseg exists
+
+	remove_local_temp_files
 
 }
 
@@ -885,6 +1042,52 @@ measure_lesion_load() {
 
 }
 
+make_png() {
+
+	# Output some figures
+
+	${FSLDIR}/bin/fslhd -x $t2_brain > hd.xml
+    rm -f thresh.nii.gz
+    ${FSLDIR}/bin/fslcreatehd hd.xml thresh
+    ${FSLDIR}/bin/fslmaths $t2_brain -bin -mul -1 -add 1 brain_mask
+    ${FSLDIR}/bin/fslmaths thresh -add $(cat thresh.txt) -mas brain_mask thresh
+    ${FSLDIR}/bin/fslmaths $t2_brain -add thresh thresh
+    ${FSLDIR}/bin/overlay 0 1 thresh -a lesionmapT2 0.9 1.1 overlay.nii.gz 
+    ${FSLDIR}/bin/fslroi overlay overlay_cropped $(fslstats $t2_brain -w)
+    ${NWTOOLS}/slicer_nw -in overlay_cropped.nii.gz -out lesions
+    html="<table><tr><td>lesion volume (mm^2)</td><td>$lesionvol</td></tr>"
+    html+="<tr><td>lesion volume (% brain volume)</td><td>$lesionnorm</td></tr>"
+    html+="<tr><td>brain volume (mm^2)</td><td>$brainvol</td></tr></table><br />"
+    html+="<img src=\"$(pwd -P)/lesions45.png\"><br />"
+    echo $html > lesions.html
+
+}
+
+remove_local_temp_files(){
+
+	if [ VERBOSE != 1 ]; then
+		for varname in ${!temp*}; do
+			current_temp_file=${!varname}
+			rm $current_temp_file
+			echo "removing ${current_temp_file}"
+		done
+	fi
+}
+
+remove_global_temp_files(){
+	
+	if [ VERBOSE != 1 ]; then
+		for varname in ${!TEMP*}; do
+			current_temp_file=${!varname}
+			rm $current_temp_file
+			echo "removing ${current_temp_file}"
+		done
+	fi
+
+}
+######################### RUN IT! ########################################
+main
+##########################################################################
 
 #pseudolesionvol=$(fslstats ${flair_nonbrain_thr} -V | cut -d' ' -f2) # This is all erroneously labeled as nonbrain. Even if we don't end up calling it all lesion, we still do want to include it in our brain volume calculation later.
 
@@ -945,7 +1148,7 @@ measure_lesion_load() {
 
 
 
-		fi
+	#	fi
 
 
 
@@ -953,8 +1156,8 @@ measure_lesion_load() {
 
 
 
-	else
-		echo "${SUB} fmriprep directory was not found"
+	#else
+	#	echo "${SUB} fmriprep directory was not found"
 
 
 
@@ -963,7 +1166,7 @@ measure_lesion_load() {
 
 
 
-	fi # fmriprep exists
+	#fi # fmriprep exists
 
 
 
@@ -991,7 +1194,7 @@ measure_lesion_load() {
 
 
 
-done # subject loop
+#done # subject loop
 
 
 
@@ -1068,112 +1271,112 @@ done # subject loop
 		# Add a way to remove the ventricles
 		#if [ ! $wmthr = -1 ]; then
 
-		if [ 1 == 2 ];then #don't do this section
-			MNItoT1="${SUB_OUTPUT_DIR}/sub-${SUB}_ses-${SES}_from-MNI_to-T1w_mode-image_xfm.mat"
-			MNItoT1warp="${SUB_OUTPUT_DIR}/sub-${SUB}_ses-${SES}_from-MNI_to-T1w_mode-image_warp.nii.gz"
-			MNIinT1warped="${SUB_OUTPUT_DIR}/sub-${SUB}_ses-${SES}_space-T1w_MNI152NLin6genAsym.nii.gz"
+		#if [ 1 == 2 ];then #don't do this section
+			#MNItoT1="${SUB_OUTPUT_DIR}/${SUB}${_SES}_from-MNI_to-T1w_mode-image_xfm.mat"
+			#MNItoT1warp="${SUB_OUTPUT_DIR}/${SUB}${SES}_from-MNI_to-T1w_mode-image_warp.nii.gz"
+			#MNIinT1warped="${SUB_OUTPUT_DIR}/sub-${SUB}${SES}_space-T1w_MNI152NLin6genAsym.nii.gz"
 
 			# Recall that FLAIR data is in T1 space
 			# TODO Would it be better to analyze everything in T2 FLAIR space?			
 			
-    			if [ ! -e ${MNItoT1} ]; then
-        		${FSLDIR}/bin/flirt -in ${FSLDIR}/data/standard/avg152T1_brain.nii.gz -ref ${t2_flair_brain} -omat ${MNItoT1}
+    			#if [ ! -e ${MNItoT1} ]; then
+        		#${FSLDIR}/bin/flirt -in ${FSLDIR}/data/standard/avg152T1_brain.nii.gz -ref ${t2_flair_brain} -omat ${MNItoT1}
         
-        		now=$(date +%s)
-        		incrementtime=$(expr $now - $totaltime - $starttime)
-        		totaltime=$(expr $now - $starttime)
-        		echo "MNI_affine_xfm_complete,$incrementtime,$totaltime" >> timing.log
+        		#now=$(date +%s)
+        		#incrementtime=$(expr $now - $totaltime - $starttime)
+        		#totaltime=$(expr $now - $starttime)
+        		#echo "MNI_affine_xfm_complete,$incrementtime,$totaltime" >> timing.log
 
-    			fi
-    			if [ ! -e "MNItoT2warp.nii.gz" ]; then
-        			${FSLDIR}/bin/fnirt --in=${FSLDIR}/data/standard/avg152T1_brain.nii.gz --ref=${t2_flair_brain} --aff=${MNItoT1} --cout=${MNItoT1warp} --iout=${MNIinT1warped}
+    			#fi
+    			#if [ ! -e "MNItoT2warp.nii.gz" ]; then
+        			#${FSLDIR}/bin/fnirt --in=${FSLDIR}/data/standard/avg152T1_brain.nii.gz --ref=${t2_flair_brain} --aff=${MNItoT1} --cout=${MNItoT1warp} --iout=${MNIinT1warped}
         
-        			now=$(date +%s)
-        			incrementtime=$(expr $now - $totaltime - $starttime)
-        			totaltime=$(expr $now - $starttime)
-        			echo "fnirt_complete,$incrementtime,$totaltime" >> timing.log
+        			#now=$(date +%s)
+        			#incrementtime=$(expr $now - $totaltime - $starttime)
+        			#totaltime=$(expr $now - $starttime)
+        			#echo "fnirt_complete,$incrementtime,$totaltime" >> timing.log
 
-    			fi
+    			#fi
 
-    			if [ `imtest wmt2` = 0 ]; then
-        			${FSLDIR}/bin/applywarp -i ${NWTOOLS}/icbm152_whitematter_mask -o wmt2 -r ${t2_flair_brain} -w ${MNItoT1warp}
+    			#if [ `imtest wmt2` = 0 ]; then
+        			#${FSLDIR}/bin/applywarp -i ${NWTOOLS}/icbm152_whitematter_mask -o wmt2 -r ${t2_flair_brain} -w ${MNItoT1warp}
         
-        			now=$(date +%s)
-        			incrementtime=$(expr $now - $totaltime - $starttime)
-        			totaltime=$(expr $now - $starttime)
-        			echo "applywarp_complete,$incrementtime,$totaltime" >> timing.log
+        			#now=$(date +%s)
+        			#incrementtime=$(expr $now - $totaltime - $starttime)
+        			#totaltime=$(expr $now - $starttime)
+        			#echo "applywarp_complete,$incrementtime,$totaltime" >> timing.log
 
-    			fi
-    			${FSLDIR}/bin/fslmaths wmt2 -thr $wmthr -bin -fillh wmt2_thr
-    			${FSLDIR}/bin/fslmaths lesionmapT2 -mas wmt2_thr lesionmapT2wm
+    			#fi
+    			#${FSLDIR}/bin/fslmaths wmt2 -thr $wmthr -bin -fillh wmt2_thr
+    			#${FSLDIR}/bin/fslmaths lesionmapT2 -mas wmt2_thr lesionmapT2wm
     
-    			now=$(date +%s)
-    			incrementtime=$(expr $now - $totaltime - $starttime)
-    			totaltime=$(expr $now - $starttime)
-    			echo "wm_thresholding_complete,$incrementtime,$totaltime" >> timing.log
+    			#now=$(date +%s)
+    			#incrementtime=$(expr $now - $totaltime - $starttime)
+    			#totaltime=$(expr $now - $starttime)
+    			#echo "wm_thresholding_complete,$incrementtime,$totaltime" >> timing.log
 
     			# fill back any lesions that may have been partially removed by masking
-    			if [ `imtest lesionmapT2wm_filled` = 0 ]; then #TODO reinstate if block
-        			${NWTOOLS}/fill_nw lesionmapT2wm t2_nonbrain_thr lesionmapT2wm_filled
+    			#if [ `imtest lesionmapT2wm_filled` = 0 ]; then #TODO reinstate if block
+        			#${NWTOOLS}/fill_nw lesionmapT2wm t2_nonbrain_thr lesionmapT2wm_filled
         
-        			now=$(date +%s)
-        			incrementtime=$(expr $now - $totaltime - $starttime)
-        			totaltime=$(expr $now - $starttime)
-        			echo "fill_nw_complete,$incrementtime,$totaltime" >> timing.log
+        			#now=$(date +%s)
+        			#incrementtime=$(expr $now - $totaltime - $starttime)
+        			#totaltime=$(expr $now - $starttime)
+        			#echo "fill_nw_complete,$incrementtime,$totaltime" >> timing.log
 
-    			fi
+    			#fi
 
     			# Now, we need to get rid of some more midline false positives such as in the septum pellucidum. 
     			# Mask lesion mask, selecting midline saggital voxels.
     			# Fill in lesions that are contiguous with this selection. Subtract from final lesion mask.
     			# TODO: is midline7 too wide? Maybe 3 or 5 would be better?
-    			if [ ! $midline = -1 ]; then
+    			#if [ ! $midline = -1 ]; then
         			# First, create midline mask
-        			midline_width=$(echo "scale=0; ($midline * 2) + 1" | bc)
-        			${FSLDIR}/bin/fslcreatehd $midline_width 233 189 1 1 1 1 1 0 0 0 2 yz_mid
-        			${FSLDIR}/bin/fslmaths yz_mid -add 1 yz_mid
-        			pad=$(echo "scale=0; (197 - $midline_width)/2" | bc)
-        			${FSLDIR}/bin/fslcreatehd $pad 233 189 1 1 1 1 1 0 0 0 2 yz_pad
-        			${FSLDIR}/bin/fslmerge -x midline yz_pad yz_mid yz_pad
+        			#midline_width=$(echo "scale=0; ($midline * 2) + 1" | bc)
+        			#${FSLDIR}/bin/fslcreatehd $midline_width 233 189 1 1 1 1 1 0 0 0 2 yz_mid
+        			#${FSLDIR}/bin/fslmaths yz_mid -add 1 yz_mid
+        			#pad=$(echo "scale=0; (197 - $midline_width)/2" | bc)
+        			#${FSLDIR}/bin/fslcreatehd $pad 233 189 1 1 1 1 1 0 0 0 2 yz_pad
+        			#${FSLDIR}/bin/fslmerge -x midline yz_pad yz_mid yz_pad
         			# Now, use the midline mask to select and fill midline lesions, then remove them from final mask
-        			${FSLDIR}/bin/applywarp -i midline -o midlinet2 -r $t2_brain -w MNItoT2warp
-        			${FSLDIR}/bin/fslmaths midlinet2 -thr 0.5 midlinet2
-        			${FSLDIR}/bin/fslmaths t2_nonbrain_thr -mas midlinet2 lesions_midline
-        			if [ ! $midmax = -1 ]; then
+        			#${FSLDIR}/bin/applywarp -i midline -o midlinet2 -r $t2_brain -w MNItoT2warp
+        			#${FSLDIR}/bin/fslmaths midlinet2 -thr 0.5 midlinet2
+        			#${FSLDIR}/bin/fslmaths t2_nonbrain_thr -mas midlinet2 lesions_midline
+        			#if [ ! $midmax = -1 ]; then
             				# As above, first step is to create a midline mask
-            				midline_width=$(echo "scale=0; ($midmax * 2) + 1" | bc)
-            				${FSLDIR}/bin/fslcreatehd $midline_width 233 189 1 1 1 1 1 0 0 0 2 yz_mid
-            				${FSLDIR}/bin/fslmaths yz_mid -add 1 yz_mid
-            				pad=$(echo "scale=0; (197 - $midline_width)/2" | bc)
-            				${FSLDIR}/bin/fslcreatehd $pad 233 189 1 1 1 1 1 0 0 0 2 yz_pad
-            				${FSLDIR}/bin/fslmerge -x midmax yz_pad yz_mid yz_pad
-            				${FSLDIR}/bin/applywarp -i midmax -o midmaxt2 -r $t2_brain -w MNItoT2warp
-            				${FSLDIR}/bin/fslmaths midmaxt2 -thr 0.5 midmaxt2
-            				${FSLDIR}/bin/fslmaths t2_nonbrain_thr -mas midmaxt2 lesions_midmax
-        			else
-            				${FSLDIR}/bin/imcp t2_nonbrain_thr lesions_midmax
-        			fi
+            				#midline_width=$(echo "scale=0; ($midmax * 2) + 1" | bc)
+            				#${FSLDIR}/bin/fslcreatehd $midline_width 233 189 1 1 1 1 1 0 0 0 2 yz_mid
+            				#${FSLDIR}/bin/fslmaths yz_mid -add 1 yz_mid
+            				#pad=$(echo "scale=0; (197 - $midline_width)/2" | bc)
+            				#${FSLDIR}/bin/fslcreatehd $pad 233 189 1 1 1 1 1 0 0 0 2 yz_pad
+            				#${FSLDIR}/bin/fslmerge -x midmax yz_pad yz_mid yz_pad
+            				#${FSLDIR}/bin/applywarp -i midmax -o midmaxt2 -r $t2_brain -w MNItoT2warp
+            				#${FSLDIR}/bin/fslmaths midmaxt2 -thr 0.5 midmaxt2
+            				#${FSLDIR}/bin/fslmaths t2_nonbrain_thr -mas midmaxt2 lesions_midmax
+        			#else
+            				#${FSLDIR}/bin/imcp t2_nonbrain_thr lesions_midmax
+        			#fi
         
-        			now=$(date +%s)
-        			incrementtime=$(expr $now - $totaltime - $starttime)
-        			totaltime=$(expr $now - $starttime)
-        			echo "midline_mask_created,$incrementtime,$totaltime" >> timing.log
+        			#now=$(date +%s)
+        			#incrementtime=$(expr $now - $totaltime - $starttime)
+        			#totaltime=$(expr $now - $starttime)
+        			#echo "midline_mask_created,$incrementtime,$totaltime" >> timing.log
 
-        			${NWTOOLS}/fill_nw lesions_midline lesions_midmax lesions_midline #TODO check if already done
+        			#${NWTOOLS}/fill_nw lesions_midline lesions_midmax lesions_midline #TODO check if already done
         
-        			now=$(date +%s)
-        			incrementtime=$(expr $now - $totaltime - $starttime)
-        			totaltime=$(expr $now - $starttime)
-        			echo "midline_mask_fill_nw_complete,$incrementtime,$totaltime" >> timing.log
+        			#now=$(date +%s)
+        			#incrementtime=$(expr $now - $totaltime - $starttime)
+        			#totaltime=$(expr $now - $starttime)
+        			#echo "midline_mask_fill_nw_complete,$incrementtime,$totaltime" >> timing.log
 
-        			${FSLDIR}/bin/fslmaths lesions_midline -binv lesions_midline_inv
-        			${FSLDIR}/bin/fslmaths lesionmapT2wm_filled -mas lesions_midline_inv lesionmapT2
-    			else
-        			${FSLDIR}/bin/immv lesionmapT2wm_filled lesionmapT2
-    			fi
-		fi
+        			#${FSLDIR}/bin/fslmaths lesions_midline -binv lesions_midline_inv
+        			#${FSLDIR}/bin/fslmaths lesionmapT2wm_filled -mas lesions_midline_inv lesionmapT2
+    			#else
+        			#${FSLDIR}/bin/immv lesionmapT2wm_filled lesionmapT2
+    			#fi
+		#fi
 
-		now=$(date +%s)
-		incrementtime=$(expr $now - $totaltime - $starttime)
-		totaltime=$(expr $now - $starttime)
-		echo "mapping_complete,$incrementtime,$totaltime" >> timing.log
+		#now=$(date +%s)
+		#incrementtime=$(expr $now - $totaltime - $starttime)
+		#totaltime=$(expr $now - $starttime)
+		#echo "mapping_complete,$incrementtime,$totaltime" >> timing.log
