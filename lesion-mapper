@@ -17,6 +17,7 @@ The lesion-mapper app has the following command line arguments:
 				[-no2fast]
 				[-v]
 				[-h]
+				[-png]
 				
 
 		
@@ -77,6 +78,9 @@ The lesion-mapper app has the following command line arguments:
 
 			-v                    
 					Keeps all output, including temp files; more verbose
+
+			-png
+					Outpus html file with summary figures to view lesions
 
 
 			-h                    
@@ -1063,7 +1067,7 @@ make_png() {
     done
 
 	${FSLDIR}/bin/slicer ${temp_overlay_for_png} -L -s 1 \
-        -x 0.3 ${temp_slc}x30.png -x 0.35 ${temp_slc}x35.png -x 0.4 ${temp_slc}x40.png -x 0.45 ${temp_slc}x45.png \ 
+        -x 0.3 ${temp_slc}x30.png -x 0.35 ${temp_slc}x35.png -x 0.4 ${temp_slc}x40.png -x 0.45 ${temp_slc}x45.png \
 		-x 0.5 ${temp_slc}x50.png -x 0.55 ${temp_slc}x55.png -x 0.6 ${temp_slc}x60.png -x 0.65 ${temp_slc}x65.png -x 0.7 ${temp_slc}x70.png \
         -y 0.3 ${temp_slc}y30.png -y 0.35 ${temp_slc}y35.png -y 0.4 ${temp_slc}y40.png -y 0.45 ${temp_slc}y45.png \
 		-y 0.5 ${temp_slc}y50.png -y 0.55 ${temp_slc}y55.png -y 0.6 ${temp_slc}y60.png -y 0.65 ${temp_slc}y65.png -y 0.7 ${temp_slc}y70.png \
