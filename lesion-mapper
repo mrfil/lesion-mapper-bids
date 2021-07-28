@@ -12,7 +12,6 @@ The lesion-mapper app has the following command line arguments:
 				[-fmriprep_dir FMRIPREP_DIRECTORY]
 				[-ses_label SESSION_LABEL]
 				[-midline INT]
-				[-midmax INT]
 				[-wmthr  0 < num < 1]
 				[-no2fast]
 				[-v]
@@ -60,12 +59,6 @@ The lesion-mapper app has the following command line arguments:
 					If set to zero, lesions crossing the midline will be removed.
 					Default is 4. Use -1 to skip this step.
 					Will be skipped if -wmthr is skipped.
-
-			-midmax     <int>  
-					Only remove parts of midline lesions that are within
-					<int> mm of midline. Should be greater than or equal to -midline.
-					Default is 9. Use -1 to skip this constraint and allow all lesions
-					contiguous with those selected via -midline to be removed.
 			
 			-wmthr      <0 < num < 1>
 					Sets the probability that an area is white matter. It is a prerequisite that 
@@ -303,8 +296,6 @@ setup_subject_global_params() {
 	# I've kept a lot of the variables local at the expense of redundancy to be safe.
 	# For example, the location of the T1w images varies by BIDS dataset.
 	# Here are usefully global variables.
-
-	#TODO: Create dockerfile
 	
 
 	#Future outputs
@@ -813,8 +804,8 @@ clean_up_midline() {
 			local temp_midline_img="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-midline_mask.nii.gz"
 			local temp_midline_flair="${SUB_OUTPUT_DIR}${SUB}${_SES}_space-FLAIR_desc-midline_mask.nii.gz"
 			local temp_flair_lesionmap_midline="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-lesionmap_midline_FLAIR.nii.gz"
-			local temp_midmax_img="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-midmax_mask.nii.gz"
-			local temp_midmax_flair="${SUB_OUTPUT_DIR}${SUB}${_SES}_space-FLAIR_desc-midmax_mask.nii.gz"
+			#local temp_midmax_img="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-midmax_mask.nii.gz"
+			#local temp_midmax_flair="${SUB_OUTPUT_DIR}${SUB}${_SES}_space-FLAIR_desc-midmax_mask.nii.gz"
 			local temp_flair_lesionmap_midmax="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-lesionmap_midmax_FLAIR.nii.gz"
 			local temp_flair_lesionmap_midline_inv="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-lesionmap_midlineinv_FLAIR.nii.gz"
 
@@ -1054,9 +1045,11 @@ make_png() {
 
 
 	temp_overlay_for_png=${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-lesionmap_overlay.nii.gz
+	temp_periventricular_overlay_for_png=${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-periventricularlesionmap_overlay.nii.gz
+	temp_deep_white_matter_overlay_for_png=${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-deepwhitelesionmap_overlay.nii.gz
 	temp_slc=${SUB_OUTPUT_DIR}${SUB}${_SES}_slc
 	LESIONMAP_PNG=${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-lesionmap_figure
-	LESIONMAP_HTML=${DERIVATIVES_DIR}${SUB}${_SES}.html
+	LESIONMAP_HTML=${DERIVATIVES_DIR}/${SUB}${_SES}.html
 	
     ${FSLDIR}/bin/overlay 0 1 ${FLAIR_BRAIN} 20 200 ${FLAIR_LESIONMAP_MASK} .9 1.1 ${temp_overlay_for_png} 
     ${FSLDIR}/bin/fslroi ${temp_overlay_for_png}  ${temp_overlay_for_png}  $(${FSLDIR}/bin/fslstats ${FLAIR_BRAIN} -w)
@@ -1089,16 +1082,95 @@ make_png() {
         ${LESIONMAP_PNG}9.png
 
 
-    html="<table><tr><td>lesion volume (mm^2)</td><td>$lesionvol</td></tr>"
+	if [[ -f "${PERIVENTRICULAR_LESIONMAP_MASK}" && -f "${DEEP_WHITE_MATTER_LESIONMAP_MASK}" ]]; then
+		    ${FSLDIR}/bin/overlay 0 1 ${FLAIR_BRAIN} 20 200 ${PERIVENTRICULAR_LESIONMAP_MASK} .9 1.1 ${temp_periventricular_overlay_for_png} 
+    		${FSLDIR}/bin/fslroi ${temp_periventricular_overlay_for_png}  ${temp_periventricular_overlay_for_png}  $(${FSLDIR}/bin/fslstats ${FLAIR_BRAIN} -w)
+
+			${FSLDIR}/bin/overlay 0 1 ${FLAIR_BRAIN} 20 200 ${DEEP_WHITE_MATTER_LESIONMAP_MASK} .9 1.1 ${temp_deep_white_matter_overlay_for_png} 
+    		${FSLDIR}/bin/fslroi ${temp_deep_white_matter_overlay_for_png}  ${temp_deep_white_matter_overlay_for_png}  $(${FSLDIR}/bin/fslstats ${FLAIR_BRAIN} -w)
+
+			# periventricular
+			temp_pv_slc=${SUB_OUTPUT_DIR}${SUB}${_SES}_pvslc
+			PV_LESIONMAP_PNG=${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-periventricularlesionmap_figure
+
+			midx=$(${FSLDIR}/bin/fslstats ${temp_periventricular_overlay_for_png} -C | cut -d" " -f1 | cut -d"." -f1)
+    		for it in {1..18}; do
+    			${FSLDIR}/bin/slicer ${temp_periventricular_overlay_for_png} -s 1 -x -`expr $it + $midx - 10` ${temp_pv_slc}i${it}.png
+ 			done
+
+			${FSLDIR}/bin/slicer ${temp_periventricular_overlay_for_png} -L -s 1 \
+        	-x 0.3 ${temp_pv_slc}x30.png -x 0.35 ${temp_pv_slc}x35.png -x 0.4 ${temp_pv_slc}x40.png -x 0.45 ${temp_pv_slc}x45.png \
+			-x 0.5 ${temp_pv_slc}x50.png -x 0.55 ${temp_pv_slc}x55.png -x 0.6 ${temp_pv_slc}x60.png -x 0.65 ${temp_pv_slc}x65.png -x 0.7 ${temp_pv_slc}x70.png \
+        	-y 0.3 ${temp_pv_slc}y30.png -y 0.35 ${temp_pv_slc}y35.png -y 0.4 ${temp_pv_slc}y40.png -y 0.45 ${temp_pv_slc}y45.png \
+			-y 0.5 ${temp_pv_slc}y50.png -y 0.55 ${temp_pv_slc}y55.png -y 0.6 ${temp_pv_slc}y60.png -y 0.65 ${temp_pv_slc}y65.png -y 0.7 ${temp_pv_slc}y70.png \
+        	-z 0.3 ${temp_pv_slc}z30.png -z 0.35 ${temp_pv_slc}z35.png -z 0.4 ${temp_pv_slc}z40.png -z 0.45 ${temp_pv_slc}z45.png \
+			-z 0.5 ${temp_pv_slc}z50.png -z 0.55 ${temp_pv_slc}z55.png -z 0.6 ${temp_pv_slc}z60.png -z 0.65 ${temp_pv_slc}z65.png -z 0.7 ${temp_pv_slc}z70.png 
+       
+    		${FSLDIR}/bin/pngappend \
+        	${temp_pv_slc}x30.png + ${temp_pv_slc}x35.png + ${temp_pv_slc}x40.png + ${temp_pv_slc}x45.png + ${temp_pv_slc}x50.png + ${temp_pv_slc}x55.png + ${temp_pv_slc}x60.png + ${temp_pv_slc}x65.png + ${temp_pv_slc}x70.png - \
+        	${temp_pv_slc}i1.png + ${temp_pv_slc}i2.png + ${temp_pv_slc}i3.png + ${temp_pv_slc}i4.png + ${temp_pv_slc}i5.png + ${temp_pv_slc}i6.png + ${temp_pv_slc}i7.png + ${temp_pv_slc}i8.png + ${temp_pv_slc}i9.png - \
+        	${temp_pv_slc}i10.png + ${temp_pv_slc}i11.png + ${temp_pv_slc}i12.png + ${temp_pv_slc}i13.png + ${temp_pv_slc}i14.png + ${temp_pv_slc}i15.png + ${temp_pv_slc}i16.png + ${temp_pv_slc}i17.png + ${temp_pv_slc}i18.png - \
+        	${temp_pv_slc}y30.png + ${temp_pv_slc}y35.png + ${temp_pv_slc}y40.png + ${temp_pv_slc}y45.png + ${temp_pv_slc}y50.png + ${temp_pv_slc}y55.png + ${temp_pv_slc}y60.png + ${temp_pv_slc}y65.png + ${temp_pv_slc}y70.png - \
+        	${temp_pv_slc}z30.png + ${temp_pv_slc}z35.png + ${temp_pv_slc}z40.png + ${temp_pv_slc}z45.png + ${temp_pv_slc}z50.png + ${temp_pv_slc}z55.png + ${temp_pv_slc}z60.png + ${temp_pv_slc}z65.png + ${temp_pv_slc}z70.png \
+        	${PV_LESIONMAP_PNG}45.png
+
+			# deep white matter
+
+			temp_dw_slc=${SUB_OUTPUT_DIR}${SUB}${_SES}_dwslc
+			DW_LESIONMAP_PNG=${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-deepwhitelesionmap_figure
+
+			midx=$(${FSLDIR}/bin/fslstats ${temp_deep_white_matter_overlay_for_png} -C | cut -d" " -f1 | cut -d"." -f1)
+    		for it in {1..18}; do
+    			${FSLDIR}/bin/slicer ${temp_deep_white_matter_overlay_for_png} -s 1 -x -`expr $it + $midx - 10` ${temp_dw_slc}i${it}.png
+ 			done
+
+			${FSLDIR}/bin/slicer ${temp_deep_white_matter_overlay_for_png} -L -s 1 \
+        	-x 0.3 ${temp_dw_slc}x30.png -x 0.35 ${temp_dw_slc}x35.png -x 0.4 ${temp_dw_slc}x40.png -x 0.45 ${temp_dw_slc}x45.png \
+			-x 0.5 ${temp_dw_slc}x50.png -x 0.55 ${temp_dw_slc}x55.png -x 0.6 ${temp_dw_slc}x60.png -x 0.65 ${temp_dw_slc}x65.png -x 0.7 ${temp_dw_slc}x70.png \
+        	-y 0.3 ${temp_dw_slc}y30.png -y 0.35 ${temp_dw_slc}y35.png -y 0.4 ${temp_dw_slc}y40.png -y 0.45 ${temp_dw_slc}y45.png \
+			-y 0.5 ${temp_dw_slc}y50.png -y 0.55 ${temp_dw_slc}y55.png -y 0.6 ${temp_dw_slc}y60.png -y 0.65 ${temp_dw_slc}y65.png -y 0.7 ${temp_dw_slc}y70.png \
+        	-z 0.3 ${temp_dw_slc}z30.png -z 0.35 ${temp_dw_slc}z35.png -z 0.4 ${temp_dw_slc}z40.png -z 0.45 ${temp_dw_slc}z45.png \
+			-z 0.5 ${temp_dw_slc}z50.png -z 0.55 ${temp_dw_slc}z55.png -z 0.6 ${temp_dw_slc}z60.png -z 0.65 ${temp_dw_slc}z65.png -z 0.7 ${temp_dw_slc}z70.png 
+       
+    		${FSLDIR}/bin/pngappend \
+        	${temp_dw_slc}x30.png + ${temp_dw_slc}x35.png + ${temp_dw_slc}x40.png + ${temp_dw_slc}x45.png + ${temp_dw_slc}x50.png + ${temp_dw_slc}x55.png + ${temp_dw_slc}x60.png + ${temp_dw_slc}x65.png + ${temp_dw_slc}x70.png - \
+        	${temp_dw_slc}i1.png + ${temp_dw_slc}i2.png + ${temp_dw_slc}i3.png + ${temp_dw_slc}i4.png + ${temp_dw_slc}i5.png + ${temp_dw_slc}i6.png + ${temp_dw_slc}i7.png + ${temp_dw_slc}i8.png + ${temp_dw_slc}i9.png - \
+        	${temp_dw_slc}i10.png + ${temp_dw_slc}i11.png + ${temp_dw_slc}i12.png + ${temp_dw_slc}i13.png + ${temp_dw_slc}i14.png + ${temp_dw_slc}i15.png + ${temp_dw_slc}i16.png + ${temp_dw_slc}i17.png + ${temp_dw_slc}i18.png - \
+        	${temp_dw_slc}y30.png + ${temp_dw_slc}y35.png + ${temp_dw_slc}y40.png + ${temp_dw_slc}y45.png + ${temp_dw_slc}y50.png + ${temp_dw_slc}y55.png + ${temp_dw_slc}y60.png + ${temp_dw_slc}y65.png + ${temp_dw_slc}y70.png - \
+        	${temp_dw_slc}z30.png + ${temp_dw_slc}z35.png + ${temp_dw_slc}z40.png + ${temp_dw_slc}z45.png + ${temp_dw_slc}z50.png + ${temp_dw_slc}z55.png + ${temp_dw_slc}z60.png + ${temp_dw_slc}z65.png + ${temp_dw_slc}z70.png \
+        	${DW_LESIONMAP_PNG}45.png
+
+
+
+	fi
+
+
+    html="<table border=1><tr><td>lesion volume (mm^2)</td><td>$lesionvol</td></tr>"
     html+="<tr><td>lesion volume (% brain volume)</td><td>$lesionnorm</td></tr>"
     html+="<tr><td>brain volume (mm^2)</td><td>$brainvol</td></tr></table><br />"
 	html+="<img src=${SUB}/${dirSES}${SUB}${_SES}_desc-lesionmap_figure45.png><br />"
 	#html+="<img src=${SUB}/${dirSES}${SUB}${_SES}_desc-lesionmap_figure9.png><br />"
+
+	if [[ -f "${PERIVENTRICULAR_LESIONMAP_MASK}" && -f "${DEEP_WHITE_MATTER_LESIONMAP_MASK}" ]]; then
+		    html+="<table border=1><tr><td>lesion volume (mm^2)</td><td>$periventricularlesionvol</td></tr>"
+    		html+="<tr><td>lesion volume (% brain volume)</td><td>$periventricularlesionnorm</td></tr></table><br />"
+			html+="<img src=${SUB}/${dirSES}${SUB}${_SES}_desc-periventricularlesionmap_figure45.png><br />"
+
+			html+="<table border=1><tr><td>lesion volume (mm^2)</td><td>$deepwhitematterlesionvol</td></tr>"
+    		html+="<tr><td>lesion volume (% brain volume)</td><td>$deepwhitematterlesionnorm</td></tr></table><br />"
+			html+="<img src=${SUB}/${dirSES}${SUB}${_SES}_desc-deepwhitelesionmap_figure45.png><br />"
+
+	fi 
+
+
     echo $html > ${LESIONMAP_HTML}
 
-	remove_local_temp_files
+	# Need to remove temp files separately because here the var is a prefix, not an actual location
+	if [ VERBOSE != 1 ]; then
+		rm ${SUB_OUTPUT_DIR}${SUB}${_SES}_*slc* 
+		echo "removing images of individual slices used to generate html"
+	fi
 
-	
 }
 
 remove_local_temp_files(){
@@ -1107,7 +1179,7 @@ remove_local_temp_files(){
 		for varname in ${!temp*}; do
 			current_temp_file=${!varname}
 			rm $current_temp_file
-			echo "removing ${current_temp_file}"
+			#echo "removing ${current_temp_file}"
 		done
 	fi
 }
@@ -1135,11 +1207,12 @@ main
 
 ########################################################TODO:###############################################################
 
-#TODO: Check why the threshold of the lesionmaps is so weird and bad (very high intensities for some reason - is this expected?)
 
 #TODO: Build separate png files for periventricular vs. deep white matter hyperintensities and add to output
 
-#TODO: What if freesurfer was not run, but T1w image was preprocessed?	
+#TODO: Build dockerfile and set to auto update with upgrades
+
+#TODO: Fix midmax, which currently doesn't work
 
 #TODO: Consider including smoothing (however, this did not work very well in the past)
 # apply smoothing to eliminate hyperintense single voxels resulting from noise
@@ -1154,6 +1227,15 @@ main
 #fi
 
 #TODO: Add multiple session labels, for cases when people want to analyze multiple sessions at once
+
+#TODO: Add midmax back
+# 			-midmax     <int>  
+#					Only remove parts of midline lesions that are within
+#					<int> mm of midline. Should be greater than or equal to -midline.
+#					Default is 9. Use -1 to skip this constraint and allow all lesions
+#					contiguous with those selected via -midline to be removed.
+
+#[-midmax INT]
 
 
 
