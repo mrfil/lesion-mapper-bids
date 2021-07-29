@@ -1152,12 +1152,13 @@ make_png() {
 	#html+="<img src=${SUB}/${dirSES}${SUB}${_SES}_desc-lesionmap_figure9.png><br />"
 
 	if [[ -f "${PERIVENTRICULAR_LESIONMAP_MASK}" && -f "${DEEP_WHITE_MATTER_LESIONMAP_MASK}" ]]; then
-		    html+="<table border=1><tr><td>lesion volume (mm^2)</td><td>$periventricularlesionvol</td></tr>"
-    		html+="<tr><td>lesion volume (% brain volume)</td><td>$periventricularlesionnorm</td></tr></table><br />"
+			html+="<br />"
+		    html+="<table border=1><tr><td>periventricular lesion volume (mm^2)</td><td>$periventricularlesionvol</td></tr>"
+    		html+="<tr><td>periventricular lesion volume (% brain volume)</td><td>$periventricularlesionnorm</td></tr></table><br />"
 			html+="<img src=${SUB}/${dirSES}${SUB}${_SES}_desc-periventricularlesionmap_figure45.png><br />"
-
-			html+="<table border=1><tr><td>lesion volume (mm^2)</td><td>$deepwhitematterlesionvol</td></tr>"
-    		html+="<tr><td>lesion volume (% brain volume)</td><td>$deepwhitematterlesionnorm</td></tr></table><br />"
+			html+="<br />"
+			html+="<table border=1><tr><td>deep white matter lesion volume (mm^2)</td><td>$deepwhitematterlesionvol</td></tr>"
+    		html+="<tr><td>deep white matter lesion volume (% brain volume)</td><td>$deepwhitematterlesionnorm</td></tr></table><br />"
 			html+="<img src=${SUB}/${dirSES}${SUB}${_SES}_desc-deepwhitelesionmap_figure45.png><br />"
 
 	fi 
