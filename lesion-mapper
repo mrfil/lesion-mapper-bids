@@ -10,6 +10,7 @@ The lesion-mapper app has the following command line arguments:
 				[-participant_label PARTICIPANT_LABEL]
 				[-derivatives_dir DERIVATIVES_DIRECTORY]
 				[-fmriprep_dir FMRIPREP_DIRECTORY]
+				[-freesurfer_dir FREESURFER_DIRECTORY]
 				[-ses_label SESSION_LABEL]
 				[-midline INT]
 				[-wmthr  0 < num < 1]
@@ -43,10 +44,15 @@ The lesion-mapper app has the following command line arguments:
 		                                                
 			-fmriprep_dir   FMRIPREP_DIRECTORY 
 					The directory with the fmriprep (or equivalent) pre-processed 
-					derivatives.lesion-mapper works best if freesurfer run inside 
+					derivatives. Lesion-mapper works best if freesurfer run inside 
 					fmriprep, because in the best case scenario it will look for 
 					the subcortical segmentation in T1w space (which fmriprep outputs
 					if freesurfer runs).
+
+			-freesurfer_dir  FREESURFER_DIRECTORY
+					If you would rather use the brain extraction and subcortical segmentations
+					from freesurfer rather than frmiprep, use this option. This option depends
+					on using extra freesurfer functions to transform .mgz files to .nii files.
 			
 			-ses_label      SESSION_LABEL
 					If a session label is included (ses-<ses_label>, it must be specified here 
@@ -124,8 +130,19 @@ main() {
 	for SUB in ${SUBS[@]}; do
 		
 		setup_subject_global_params
+
+		if [[ -d ${SUB_FREESURFER_DIR} && -d ${SUB_FMRIPREP_DIR} ]]; then
+			
+			echo "You input both a freesurfer directory and an fmriprep directory.
+			Lesion-mapper will use freesurfer. Please de-specify the freesurfer
+			directory if you wish to use fmriprep."
+		fi
+
+		if [ -d ${SUB_FREESURFER_DIR} ]; then
+
+			lesion_map_with_freesurfer
 				
-		if [ -d ${SUB_FMRIPREP_DIR} ]; then
+		elif [ -d ${SUB_FMRIPREP_DIR} ]; then
 
 			lesion_map_with_fmriprep 
 
@@ -165,6 +182,7 @@ cmdline() {
 	BIDS_DIR="${ARGS[0]}"
 	DERIVATIVES_DIR="${BIDS_DIR}/derivatives/lesion-mapper"
 	FMRIPREP_DIR=
+	FREESURFER_DIR=
 	PARTICIPANT_LABEL=
 	SES_LABEL=
 	VERBOSE=0
@@ -184,6 +202,10 @@ cmdline() {
 				
     	elif [ "$2" = "-fmriprep_dir" ]; then
 				FMRIPREP_DIR="$3"
+				shift 2
+
+		elif [ "$2" = "-freesurfer_dir" ]; then
+				FREESURFER_DIR="$3"
 				shift 2
 				
 		elif [ "$2" = "-derivatives_dir" ]; then
@@ -232,11 +254,15 @@ cmdline() {
     	fi
 	done
 
+	## Automatically search for fmriprep directory?
+	#if [[ -d "${BIDS_DIR}/derivatives/fmriprep" && -z "${FMRIPREP_DIR}" ]]; then
+	#	FMRIPREP_DIR="${BIDS_DIR}/derivatives/fmriprep"
+	#fi
 
-	if [[ -d "${BIDS_DIR}/derivatives/fmriprep" && -z "${FMRIPREP_DIR}" ]]; then
-		FMRIPREP_DIR="${BIDS_DIR}/derivatives/fmriprep"
-	fi
-
+	##Automatically search for freesurfer directory?
+	#if [[ -d "${BIDS_DIR}/derivatives/freesurfer" && -z "${FREESURFER_DIR}" ]]; then
+	#	FREESURFER_DIR="${BIDS_DIR}/derivatives/freesurfer"
+	#fi
 
 	# Output verbosity
 	if [ $VERBOSE = 1 ]; then
@@ -246,19 +272,31 @@ cmdline() {
 			echo "fMRIprep directory=$FMRIPREP_DIR"
 		fi
 
+		if [ -n "$FREESURFER_DIR" ];then
+			echo "freesurfer directory=$FREESURFER_DIR"
+		fi
+
 		if [ -n "$PARTICIPANT_LABEL" ]; then
 			echo "Participant label=$PARTICIPANT_LABEL"
 		fi
     		echo "png=$PNG"
     		echo "wmthr=$WMTHR"
     		echo "midline=$MIDLINE"
-		echo "midmax=$MIDMAX"
+			#echo "midmax=$MIDMAX"
 	fi
 
 	# Check if FSL is installed
 	if [ -z "$FSLDIR" ]; then
     		echo "ERROR: environment variable FSLDIR not set."
     		failed=1
+	fi
+
+	# Check if freesurfer is installed if needed
+	if [ -n "$FREESURFER_DIR" ]; then
+		if [ -z "$FREESURFER_HOME" ]; then
+			echo "ERROR: environment variable FREESURFER_HOME not set"
+			failed=1
+		fi
 	fi
 	
 	# Test if BIDS directory is accessible
@@ -313,9 +351,8 @@ setup_subject_global_params() {
 	# Note that all of these may not be used, depending on what's available
 	
 	SUB_FMRIPREP_DIR="${FMRIPREP_DIR}/${SUB}"
+	SUB_FREESURFER_DIR="${FREESURFER_DIR}/${SUB}*"
 	
-
-
 	#Possible inputs
 
 	FLAIR="${BIDS_DIR}/${SUB}/${dirSES}anat/*FLAIR.nii.gz"
@@ -360,7 +397,68 @@ log_time() {
 }
 
 
+lesion_map_with_freesurfer(){
+
+	# Brain extracted T1 and aseg are located in freesurfer directory
+	# We will find those files, convert to .nii, and register with T1w image
+
+	# Check where aseg is
 		
+		if compgen -G "${SUB_FREESURFER_DIR}/mri/aparc+aseg.mgz" > /dev/null; then #if aseg is in mri directory
+			local aseg_mgz="${SUB_FREESURFER_DIR}/mri/aparc+aseg.mgz"
+			local stats="${SUB_FREESURFER_DIR}/stats/aseg.stats"
+			ASEG="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-aseg_dseg.nii.gz"
+			echo "Using sub-cortical segmentation from ${SUB_FREESURFER_DIR}/mri"	
+
+			$FREESURFER_HOME/bin/mri_convert ${aseg_mgz} ${ASEG}
+			BRAINVOL_FREESURFER=$(grep -A 0 "# Measure BrainSegNotVentSurf" ${stats} | sed -e 's/.*Ventricles from Surf, \(.*\), mm.*/\1/')		
+
+		else
+			
+			echo "Not using sub-cortical segmentation. None found."
+
+		fi
+		
+			# Check where T1w is
+		
+		if compgen -G "${SUB_FREESURFER_DIR}/mri/T1.mgz" > /dev/null; then
+			t1w_mgz="${SUB_FREESURFER_DIR}/mri/T1.mgz"
+			echo "Using T1w image from ${SUB_FREESURFER_DIR}/mri"
+			T1W="${SUB_OUTPUT_DIR}${SUB}${_SES}_T1w.nii.gz"
+
+			$FREESURFER_HOME/bin/mri_convert ${t1w_mgz} ${T1W}	
+
+		else
+			echo "Not using T1w image. None found."
+		fi
+
+			# Check where T1w brain is
+		if compgen -G "${SUB_FREESURFER_DIR}/mri/brainmask.mgz" > /dev/null; then
+			local t1w_brain_mgz="${SUB_FREESURFER_DIR}/mri/brainmask.mgz"
+			T1W_BRAIN_MASK="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-brain_mask.nii.gz"
+
+			$FREESURFER_HOME/bin/mri_convert ${t1w_brain_mgz} ${T1W_BRAIN_MASK}
+
+			${FSLDIR}/bin/fslmaths ${T1W_BRAIN_MASK} -bin ${T1W_BRAIN_MASK} 
+			echo "Using T1w brain mask from ${SUB_FREESURFER_DIR}/mri"
+
+		else
+			echo "Not using T1w brain mask. None found."
+		fi 
+
+	####################################
+	#FUNCTION BLOCK
+	####################################	
+	unbias_flair
+	unbias_t1
+	extract_flair_brain_using_t1
+	find_candidate_lesions
+	build_initial_lesionmap
+	clean_initial_lesionmap
+	measure_lesion_load
+	####################################
+
+}		
 		
 lesion_map_with_fmriprep(){
 	
@@ -553,6 +651,7 @@ extract_flair_brain_using_t1() {
 	${FSLDIR}/bin/flirt -applyxfm -init "${T1_TO_FLAIR}" -in "${T1W_BRAIN_MASK}" -ref "${FLAIR_PREPROC}" -out "${FLAIR_BRAIN_MASK}"
 
 	${FSLDIR}/bin/fslmaths "${FLAIR_PREPROC}" -mas "${FLAIR_BRAIN_MASK}" "${FLAIR_BRAIN}"
+
 
 	echo "Generated ${FLAIR_BRAIN}"
 	log_time "Generated ${FLAIR_BRAIN}"
@@ -919,7 +1018,7 @@ use_aseg_mask() {
 			
 			echo "Separating periventricular lesions from deep white matter lesions"
 			echo "${ASEG}"
-		
+
 			
 			${FSLDIR}/bin/fslmaths ${ASEG} -thr 4 -uthr 4 ${temp_left_lat_ventricle}
 			${FSLDIR}/bin/fslmaths ${ASEG} -thr 5 -uthr 5 ${temp_left_inf_lat_ventricle}
@@ -1010,12 +1109,18 @@ measure_lesion_load() {
 			#TODO: fix variable names
 
 			lesionvol=$(${FSLDIR}/bin/fslstats ${FLAIR_LESIONMAP_MASK} -V | cut -d' ' -f2)
-			brainvol=$(${FSLDIR}/bin/fslstats ${FLAIR_BRAIN_MASK} -V | cut -d' ' -f2) 
+			
+			if [ -n ${BRAINVOL_FREESURFER} ]; then
+				brainvol=${BRAINVOL_FREESURFER}
+			else 
+				brainvol=$(${FSLDIR}/bin/fslstats ${FLAIR_BRAIN_MASK} -V | cut -d' ' -f2) 
+			fi
+			
 			#brainvol=$(echo "scale=6; ${pseudolesionvol} + $brainvol" | bc) #This isn't needed because I used a different segmentation than fast to define the brain mask
 			lesionnorm=$(echo "scale=6; $lesionvol * 100 / $brainvol" | bc)
 
 			echo "lesion volume (mm^2),lesion volume (% brain volume),brain volume (mm^2)" > ${SUB_OUTPUT_DIR}/lesionstats.csv
-			echo "${lesionvol},${lesionnorm},${brainvol}" >> ${SUB_OUTPUT_DIR}/lesionstats.csv
+			echo "${lesionvol},${lesionnorm},${brainvol},${BRAINVOL_FREESURFER}" >> ${SUB_OUTPUT_DIR}/lesionstats.csv
 
 			if [[ -f "${PERIVENTRICULAR_LESIONMAP_MASK}" && -f "${DEEP_WHITE_MATTER_LESIONMAP_MASK}" ]];then
 			# if periventricular lesionmap mask and deep white matter lesionmap mask exist
