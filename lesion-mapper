@@ -821,13 +821,15 @@ apply_white_matter_mask() {
 		# applywarp --ref=MNI152_T1_2mm	--in=flair --out=flairInMNI --warp=warp_struct2mni --premat=flair2struct
 		
     		if [ ! -e "${MNI_TO_FLAIR}" ]; then
-        		${FSLDIR}/bin/flirt -in ${NWTOOLS}/icbm152_flair_brain -ref ${FLAIR_BRAIN} -omat ${MNI_TO_FLAIR}
+        		echo "computing affine transform for MNI to FLAIR"
+				${FSLDIR}/bin/flirt -in ${NWTOOLS}/icbm152_flair_brain -ref ${FLAIR_BRAIN} -omat ${MNI_TO_FLAIR}
 
 			log_time "MNI_affine_xfm_complete"
     		fi
 
 		#TODO Even in this section, it seems like we ought to move in the other direction and apply and inverse warp
     		if [ ! -e "${MNI_TO_FLAIR_WARP}}" ]; then
+				echo "computing nonlinear transform from MNI to FLAIR"
         		${FSLDIR}/bin/fnirt --in="${NWTOOLS}/icbm152_flair_brain" --ref="${FLAIR_BRAIN}" --aff=${MNI_TO_FLAIR} --cout=${MNI_TO_FLAIR_WARP} --iout=${MNI_IN_FLAIR_WARPED}
         
 			log_time "MNI_warp_complete"
@@ -1119,7 +1121,7 @@ measure_lesion_load() {
 			#brainvol=$(echo "scale=6; ${pseudolesionvol} + $brainvol" | bc) #This isn't needed because I used a different segmentation than fast to define the brain mask
 			lesionnorm=$(echo "scale=6; $lesionvol * 100 / $brainvol" | bc)
 
-			echo "lesion volume (mm^2),lesion volume (% brain volume),brain volume (mm^2)" > ${SUB_OUTPUT_DIR}/lesionstats.csv
+			echo "lesion volume (mm^3),lesion volume (% brain volume),brain volume (mm^3)" > ${SUB_OUTPUT_DIR}/lesionstats.csv
 			echo "${lesionvol},${lesionnorm},${brainvol},${BRAINVOL_FREESURFER}" >> ${SUB_OUTPUT_DIR}/lesionstats.csv
 
 			if [[ -f "${PERIVENTRICULAR_LESIONMAP_MASK}" && -f "${DEEP_WHITE_MATTER_LESIONMAP_MASK}" ]];then
@@ -1130,10 +1132,10 @@ measure_lesion_load() {
 				periventricularlesionnorm=$(echo "scale=6; ${periventricularlesionvol} * 100 / ${brainvol}" | bc)
 				deepwhitematterlesionnorm=$(echo "scale=6; ${deepwhitematterlesionvol} * 100 / ${brainvol}" | bc)
 
-				echo "periventricular lesion volume (mm^2),periventricular lesion volume (% brain volume),periventricular brain volume (mm^2)" > ${SUB_OUTPUT_DIR}/periventricular_lesionstats.csv
+				echo "periventricular lesion volume (mm^3),periventricular lesion volume (% brain volume),periventricular brain volume (mm^3)" > ${SUB_OUTPUT_DIR}/periventricular_lesionstats.csv
 				echo "${periventricularlesionvol},${periventricularlesionnorm},${brainvol}" >> ${SUB_OUTPUT_DIR}/periventricular_lesionstats.csv
 
-				echo "deepwhitematter lesion volume (mm^2),deepwhitematter lesion volume (% brain volume),deepwhitematter brain volume (mm^2)" > ${SUB_OUTPUT_DIR}/deepwhitematter_lesionstats.csv
+				echo "deepwhitematter lesion volume (mm^3),deepwhitematter lesion volume (% brain volume),deepwhitematter brain volume (mm^3)" > ${SUB_OUTPUT_DIR}/deepwhitematter_lesionstats.csv
 				echo "${deepwhitematterlesionvol},${deepwhitematterlesionnorm},${brainvol}" >> ${SUB_OUTPUT_DIR}/deepwhitematter_lesionstats.csv
 			
 			else
@@ -1250,19 +1252,19 @@ make_png() {
 	fi
 
 
-    html="<table border=1><tr><td>lesion volume (mm^2)</td><td>$lesionvol</td></tr>"
+    html="<table border=1><tr><td>lesion volume (mm^3)</td><td>$lesionvol</td></tr>"
     html+="<tr><td>lesion volume (% brain volume)</td><td>$lesionnorm</td></tr>"
-    html+="<tr><td>brain volume (mm^2)</td><td>$brainvol</td></tr></table><br />"
+    html+="<tr><td>brain volume (mm^3)</td><td>$brainvol</td></tr></table><br />"
 	html+="<img src=${SUB}/${dirSES}${SUB}${_SES}_desc-lesionmap_figure45.png><br />"
 	#html+="<img src=${SUB}/${dirSES}${SUB}${_SES}_desc-lesionmap_figure9.png><br />"
 
 	if [[ -f "${PERIVENTRICULAR_LESIONMAP_MASK}" && -f "${DEEP_WHITE_MATTER_LESIONMAP_MASK}" ]]; then
 			html+="<br />"
-		    html+="<table border=1><tr><td>periventricular lesion volume (mm^2)</td><td>$periventricularlesionvol</td></tr>"
+		    html+="<table border=1><tr><td>periventricular lesion volume (mm^3)</td><td>$periventricularlesionvol</td></tr>"
     		html+="<tr><td>periventricular lesion volume (% brain volume)</td><td>$periventricularlesionnorm</td></tr></table><br />"
 			html+="<img src=${SUB}/${dirSES}${SUB}${_SES}_desc-periventricularlesionmap_figure45.png><br />"
 			html+="<br />"
-			html+="<table border=1><tr><td>deep white matter lesion volume (mm^2)</td><td>$deepwhitematterlesionvol</td></tr>"
+			html+="<table border=1><tr><td>deep white matter lesion volume (mm^3)</td><td>$deepwhitematterlesionvol</td></tr>"
     		html+="<tr><td>deep white matter lesion volume (% brain volume)</td><td>$deepwhitematterlesionnorm</td></tr></table><br />"
 			html+="<img src=${SUB}/${dirSES}${SUB}${_SES}_desc-deepwhitelesionmap_figure45.png><br />"
 
@@ -1314,7 +1316,7 @@ main
 ########################################################TODO:###############################################################
 
 
-#TODO: Build separate png files for periventricular vs. deep white matter hyperintensities and add to output
+
 
 #TODO: Build dockerfile and set to auto update with upgrades
 
