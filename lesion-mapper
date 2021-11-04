@@ -820,6 +820,7 @@ apply_white_matter_mask() {
 		# fnirt --ref=MNI152_T1_2mm_Brain --in=struct --aff=aff_struct2mni.mat --cout=warp_struct2mni.nii --iout=struct2mniwarped
 		# applywarp --ref=MNI152_T1_2mm	--in=flair --out=flairInMNI --warp=warp_struct2mni --premat=flair2struct
 		
+		echo "looking for MNI to FLAIR transform"
     		if [ ! -e "${MNI_TO_FLAIR}" ]; then
         		echo "computing affine transform for MNI to FLAIR"
 				${FSLDIR}/bin/flirt -in ${NWTOOLS}/icbm152_flair_brain -ref ${FLAIR_BRAIN} -omat ${MNI_TO_FLAIR}
@@ -850,7 +851,7 @@ apply_white_matter_mask() {
 
     		if [ `imtest ${temp_flair_wm}` = 0 ]; then
 
-
+				echo "Attempting to apply warp MNI_to_FLAIR"
         		${FSLDIR}/bin/applywarp -i "${NWTOOLS}/icbm152_whitematter_mask" -o "${temp_flair_wm}" -r "${FLAIR_BRAIN}" -w "${MNI_TO_FLAIR_WARP}"
         
 				log_time "applywarp_to_whitematter_mask_complete"
