@@ -1,1 +1,2 @@
   * text eol=lf
+*.nii* filter=lfs diff=lfs merge=lfs -text
