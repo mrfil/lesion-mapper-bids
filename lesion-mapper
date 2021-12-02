@@ -1160,10 +1160,6 @@ make_png() {
 
 	# Output some figures
 
-
-	temp_overlay_for_png=${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-lesionmap_overlay.nii.gz
-	temp_periventricular_overlay_for_png=${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-periventricularlesionmap_overlay.nii.gz
-	temp_deep_white_matter_overlay_for_png=${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-deepwhitelesionmap_overlay.nii.gz
 	temp_slc=${SUB_OUTPUT_DIR}${SUB}${_SES}_slc
 	LESIONMAP_PNG=${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-lesionmap_figure
 	LESIONMAP_HTML=${DERIVATIVES_DIR}/${SUB}${_SES}.html
@@ -1283,13 +1279,16 @@ make_png() {
 
     echo $html > ${LESIONMAP_HTML}
 
-	remove_local_temp_files
-	# Need to remove temp files separately because here the var is a prefix, not an actual location
-	#if [ VERBOSE != 1 ]; then
-	#	rm ${SUB_OUTPUT_DIR}${SUB}${_SES}_*slc* 
-	#	echo "removing images of individual slices used to generate html"
-	#fi
 
+	# Need to remove temp files separately because here the var is a prefix, not an actual location
+	if [ VERBOSE != 1 ]; then
+		rm ${SUB_OUTPUT_DIR}${SUB}${_SES}_*slc* 
+		echo "removing images of individual slices used to generate html"
+	fi
+
+	env -u temp_dw_slc
+	env -u temp_pv_slc
+	evn -u temp_slc
 }
 
 remove_local_temp_files(){
