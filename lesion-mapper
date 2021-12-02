@@ -316,7 +316,7 @@ cmdline() {
 	
 	# Build the subject array
 	if [ -n "${PARTICIPANT_LABEL}" ];then
-		SUBS=${PARTICIPANT_LABEL}
+		SUBS="sub-${PARTICIPANT_LABEL}"
 	else
 		SUBS=(${BIDS_DIR}/sub*)
 		SUBS=("${SUBS[@]#"${BIDS_DIR}/"}")
@@ -420,6 +420,7 @@ lesion_map_with_freesurfer(){
 		fi
 		
 			# Check where T1w is
+			
 		
 		if compgen -G "${SUB_FREESURFER_DIR}/mri/T1.mgz" > /dev/null; then
 			t1w_mgz="${SUB_FREESURFER_DIR}/mri/T1.mgz"
@@ -433,6 +434,7 @@ lesion_map_with_freesurfer(){
 		fi
 
 			# Check where T1w brain is
+
 		if compgen -G "${SUB_FREESURFER_DIR}/mri/brainmask.mgz" > /dev/null; then
 			local t1w_brain_mgz="${SUB_FREESURFER_DIR}/mri/brainmask.mgz"
 			T1W_BRAIN_MASK="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-brain_mask.nii.gz"
@@ -452,6 +454,7 @@ lesion_map_with_freesurfer(){
 	unbias_flair
 	unbias_t1
 	extract_flair_brain_using_t1
+	clean_flair_brain
 	find_candidate_lesions
 	build_initial_lesionmap
 	clean_initial_lesionmap
@@ -632,6 +635,7 @@ extract_t1_brain() {
 	bet_nw ${T1W_PREPROC} ${T1W_BRAIN_MASK} -R -d -s -m -f 0.4 -g -0.2
 }
 
+
 extract_flair_brain_using_flair_only() {
 	echo "extracting FLAIR brain"
 	bet_nw ${FLAIR_PREPROC} ${FLAIR_BRAIN} -R -d -s -f 0.4 -g -0.2
@@ -656,6 +660,11 @@ extract_flair_brain_using_t1() {
 	echo "Generated ${FLAIR_BRAIN}"
 	log_time "Generated ${FLAIR_BRAIN}"
 }		
+
+clean_flair_brain(){
+	echo "refining the FLAIR brain extraction"
+	bet_nw ${FLAIR_BRAIN} ${FLAIR_BRAIN} -f 0.2 -g 0.2
+}
 
 
 find_candidate_lesions() {
@@ -1274,11 +1283,12 @@ make_png() {
 
     echo $html > ${LESIONMAP_HTML}
 
+	remove_local_temp_files
 	# Need to remove temp files separately because here the var is a prefix, not an actual location
-	if [ VERBOSE != 1 ]; then
-		rm ${SUB_OUTPUT_DIR}${SUB}${_SES}_*slc* 
-		echo "removing images of individual slices used to generate html"
-	fi
+	#if [ VERBOSE != 1 ]; then
+	#	rm ${SUB_OUTPUT_DIR}${SUB}${_SES}_*slc* 
+	#	echo "removing images of individual slices used to generate html"
+	#fi
 
 }
 
