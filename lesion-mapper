@@ -1286,9 +1286,9 @@ make_png() {
 		echo "removing images of individual slices used to generate html"
 	fi
 
-	env -u temp_dw_slc
-	env -u temp_pv_slc
-	evn -u temp_slc
+	unset temp_dw_slc
+	unset temp_pv_slc
+	unset temp_slc
 }
 
 remove_local_temp_files(){
