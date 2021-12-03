@@ -1159,6 +1159,9 @@ measure_lesion_load() {
 make_png() {
 
 	# Output some figures
+	local temp_overlay_for_png=${SUB_OUTPUT_DIR}${SUB}${_SES}_space-FLAIR_desc-lesionmap_overlay.nii.gz
+	local temp_periventricular_overlay_for_png=${SUB_OUTPUT_DIR}${SUB}${_SES}_space-FLAIR_desc-periventricularlesionmap_overlay.nii.gz
+	local temp_deep_white_matter_overlay_for_png=${SUB_OUTPUT_DIR}${SUB}${_SES}_space-FLAIR_desc-deepwhitematterlesionmap_overlay.nii.gz
 
 	temp_slc=${SUB_OUTPUT_DIR}${SUB}${_SES}_slc
 	LESIONMAP_PNG=${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-lesionmap_figure
@@ -1289,6 +1292,9 @@ make_png() {
 	unset temp_dw_slc
 	unset temp_pv_slc
 	unset temp_slc
+	unset temp_overlay_for_png
+	unset temp_periventricular_overlay_for_png
+	unset temp_deep_white_matter_overlay_for_png
 }
 
 remove_local_temp_files(){
