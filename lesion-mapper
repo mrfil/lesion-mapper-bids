@@ -165,6 +165,7 @@ main() {
 		fi
 
 		remove_global_temp_files
+		unset_global_variables
 
 	done #subject loop
 
@@ -460,13 +461,14 @@ lesion_map_with_freesurfer(){
 	clean_initial_lesionmap
 	measure_lesion_load
 	####################################
+	
+	unset ASEG
 
 }		
 		
 lesion_map_with_fmriprep(){
 	
 	local sub_fmriprep_ses_dir="${SUB_FMRIPREP_DIR}/${dirSES}"
-	local aseg
 
 	if [ -n ${SES_LABEL} ];then
 
@@ -539,6 +541,7 @@ lesion_map_with_fmriprep(){
 	measure_lesion_load
 	####################################
 	
+
 } 	
 		
 
@@ -1317,6 +1320,29 @@ remove_global_temp_files(){
 			echo "removing ${current_temp_file}"
 		done
 	fi
+
+}
+
+
+unset_global_variables(){
+	
+	unset ASEG
+	unset BRAINVOL_FREESURFER
+	unset FLAIR
+	unset FLAIR_PREPROC
+	unset T1W_PREPROC
+	unset T1W_RAW
+	unset FLAIR_BRAIN_MASK
+	unset FLAIR_BRAIN
+	unset FLAIR_TO_T1
+	unset FLAIR_IN_T1
+	unset T1_TO_FLAIR
+	unset FLAIR_LESIONMAP
+	unset TEMP_FLAIR_NONBRAIN
+	unset MNI_TO_FLAIR
+	unset MNI_TO_FLAIR_WARP
+	unset MNI_IN_FLAIR_WARPED
+
 
 }
 ######################### RUN IT! ########################################
