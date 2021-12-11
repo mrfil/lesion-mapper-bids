@@ -593,6 +593,7 @@ lesion_map_with_T1w() {
 	unbias_flair
 	extract_t1_brain	
 	extract_flair_brain_using_t1
+	clean_flair_brain
 	find_candidate_lesions
 	build_initial_lesionmap
 	clean_initial_lesionmap
@@ -995,7 +996,7 @@ clean_up_midline() {
 
 use_aseg_mask() {
 
-	if [ -f ${ASEG} ];then
+	if [ ! -z "${ASEG}" ] && [ -f ${ASEG} ];then
 
 			echo "Using ventricle masks from fmriprep"
 		
@@ -1111,6 +1112,9 @@ use_aseg_mask() {
 
 	else
 		echo "The aseg segmentations from fmriprep do not exist."
+		FLAIR_LESIONMAP_MASK="${SUB_OUTPUT_DIR}${SUB}${_SES}_space-FLAIR_desc-lesionmap_mask.nii.gz"
+		${FSLDIR}/bin/fslmaths ${FLAIR_LESIONMAP} -bin ${FLAIR_LESIONMAP_MASK}
+	
 
 	fi #aseg exists
 
@@ -1123,19 +1127,24 @@ measure_lesion_load() {
 			# Extract metrics from lesion map
 			#TODO: fix variable names
 
+			
+			
 			lesionvol=$(${FSLDIR}/bin/fslstats ${FLAIR_LESIONMAP_MASK} -V | cut -d' ' -f2)
 			
-			if [ -n ${BRAINVOL_FREESURFER} ]; then
+
+			if [ ! -z "${BRAINVOL_FREESURFER}" ] && [ -n ${BRAINVOL_FREESURFER} ]; then
 				brainvol=${BRAINVOL_FREESURFER}
 			else 
 				brainvol=$(${FSLDIR}/bin/fslstats ${FLAIR_BRAIN_MASK} -V | cut -d' ' -f2) 
 			fi
+
+			
 			
 			#brainvol=$(echo "scale=6; ${pseudolesionvol} + $brainvol" | bc) #This isn't needed because I used a different segmentation than fast to define the brain mask
 			lesionnorm=$(echo "scale=6; $lesionvol * 100 / $brainvol" | bc)
 
 			echo "lesion volume (mm^3),lesion volume (% brain volume),brain volume (mm^3)" > ${SUB_OUTPUT_DIR}/lesionstats.csv
-			echo "${lesionvol},${lesionnorm},${brainvol},${BRAINVOL_FREESURFER}" >> ${SUB_OUTPUT_DIR}/lesionstats.csv
+			echo "${lesionvol},${lesionnorm},${brainvol}" >> ${SUB_OUTPUT_DIR}/lesionstats.csv
 
 			if [[ -f "${PERIVENTRICULAR_LESIONMAP_MASK}" && -f "${DEEP_WHITE_MATTER_LESIONMAP_MASK}" ]];then
 			# if periventricular lesionmap mask and deep white matter lesionmap mask exist
