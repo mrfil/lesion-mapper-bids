@@ -416,7 +416,7 @@ lesion_map_with_freesurfer(){
 
 		else
 			
-			echo "Not using sub-cortical segmentation. None found."
+			echo "Not using sub-cortical segmentation from Freesurfer. None found."
 
 		fi
 		
@@ -431,7 +431,7 @@ lesion_map_with_freesurfer(){
 			$FREESURFER_HOME/bin/mri_convert ${t1w_mgz} ${T1W}	
 
 		else
-			echo "Not using T1w image. None found."
+			echo "Not using T1w image from Freesurfer. None found."
 		fi
 
 			# Check where T1w brain is
@@ -446,7 +446,7 @@ lesion_map_with_freesurfer(){
 			echo "Using T1w brain mask from ${SUB_FREESURFER_DIR}/mri"
 
 		else
-			echo "Not using T1w brain mask. None found."
+			echo "Not using T1w brain mask from Freesurfer. None found."
 		fi 
 
 	####################################
@@ -472,16 +472,17 @@ lesion_map_with_fmriprep(){
 
 	if [ -n ${SES_LABEL} ];then
 
-		echo "${sub_fmriprep_anat_dir}/${SUB}${_SES}_desc-aseg_dseg.nii.gz"
+		echo "`ls ${sub_fmriprep_anat_dir}/${SUB}${_SES}*_desc-aseg_dseg.nii.gz | grep -v space`"
+		#grep -v space is to avoid the case where there is a space specified (such as MNI) in the name of the file
 		# Sometimes if a session label is specified, the anat could be in the ses folder or the top folder
 		# Look for anatomical file first in session directory, and then in anat directory
 		# Check where aseg is
-		if [ -f "${sub_fmriprep_ses_dir}anat/${SUB}${_SES}_desc-aseg_dseg.nii.gz" ];then #if aseg is in session directory
-			ASEG="${sub_fmriprep_ses_dir}anat/${SUB}${_SES}_desc-aseg_dseg.nii.gz"
+		if [ -f "`ls ${sub_fmriprep_ses_dir}anat/${SUB}${_SES}*_desc-aseg_dseg.nii.gz | grep -v space`" ];then #if aseg is in session directory
+			ASEG="`ls ${sub_fmriprep_ses_dir}anat/${SUB}${_SES}*_desc-aseg_dseg.nii.gz | grep -v space`"
 			echo "Using sub-cortical segmentation from ${sub_fmriprep_ses_dir}/anat"			
 
-		elif [ -f "${SUB_FMRIPREP_DIR}/anat/${SUB}_desc-aseg_dseg.nii.gz" ];then #if aseg is in anat directory
-			ASEG="${SUB_FMRIPREP_DIR}/anat/${SUB}_desc-aseg_dseg.nii.gz"			
+		elif [ -f "`ls ${SUB_FMRIPREP_DIR}/anat/${SUB}*_desc-aseg_dseg.nii.gz | grep -v space`" ];then #if aseg is in anat directory
+			ASEG="`ls ${SUB_FMRIPREP_DIR}/anat/${SUB}*_desc-aseg_dseg.nii.gz | grep -v space`"			
 			echo "Using sub-cortical segmentation from ${SUB_FMRIPREP_DIR}/anat"
 
 		else
@@ -493,12 +494,12 @@ lesion_map_with_fmriprep(){
 
 		# Check where T1w is
 		
-		if [ -f "${sub_fmriprep_ses_dir}anat/${SUB}${_SES}_desc-preproc_T1w.nii.gz" ];then
-			T1W="${sub_fmriprep_ses_dir}anat/${SUB}${_SES}_desc-preproc_T1w.nii.gz"
+		if [ -f "`ls ${sub_fmriprep_ses_dir}anat/${SUB}${_SES}*_desc-preproc_T1w.nii.gz | grep -v space`" ];then
+			T1W="`ls ${sub_fmriprep_ses_dir}anat/${SUB}${_SES}*_desc-preproc_T1w.nii.gz | grep -v space`"
 			echo "Using T1w image from ${sub_fmriprep_ses_dir}/anat"
 
-		elif [ -f "${SUB_FMRIPREP_DIR}/anat/${SUB}_desc-preproc_T1w.nii.gz" ];then
-			T1W="${SUB_FMRIPREP_DIR}/anat/${SUB}_desc-preproc_T1w.nii.gz"
+		elif [ -f "`ls ${SUB_FMRIPREP_DIR}/anat/${SUB}*_desc-preproc_T1w.nii.gz | grep -v space`" ];then
+			T1W="`ls ${SUB_FMRIPREP_DIR}/anat/${SUB}*_desc-preproc_T1w.nii.gz | grep -v space`"
 			echo "Using T1w image from ${SUB_FMRIPREP_DIR}/anat"
 		else
 			echo "Not using T1w image. None found."
@@ -506,12 +507,12 @@ lesion_map_with_fmriprep(){
 
 
 			# Check where T1w brain mask is
-		if [ -f "${sub_fmriprep_ses_dir}anat/${SUB}${_SES}_desc-brain_mask.nii.gz" ];then
-			T1W_BRAIN_MASK="${sub_fmriprep_ses_dir}anat/${SUB}${_SES}_desc-brain_mask.nii.gz" 
+		if [ -f "`ls ${sub_fmriprep_ses_dir}anat/${SUB}${_SES}*_desc-brain_mask.nii.gz | grep -v space`" ];then
+			T1W_BRAIN_MASK="`ls ${sub_fmriprep_ses_dir}anat/${SUB}${_SES}*_desc-brain_mask.nii.gz | grep -v space`"
 			echo "Using T1w brain mask from ${sub_fmriprep_ses_dir}/anat"
 
-		elif [ -f "${SUB_FMRIPREP_DIR}/anat/${SUB}_desc-brain_mask.nii.gz" ];then
-			T1W_BRAIN_MASK="${SUB_FMRIPREP_DIR}/anat/${SUB}_desc-brain_mask.nii.gz"
+		elif [ -f "`ls ${SUB_FMRIPREP_DIR}/anat/${SUB}*_desc-brain_mask.nii.gz | grep -v space`" ];then
+			T1W_BRAIN_MASK="`ls ${SUB_FMRIPREP_DIR}/anat/${SUB}*_desc-brain_mask.nii.gz | grep -v space`"
 			echo "Using T1w brain mask from ${SUB_FMRIPREP_DIR}/anat"
 		else
 			echo "Not using T1w brain mask. None found."
@@ -519,13 +520,13 @@ lesion_map_with_fmriprep(){
 						
 	else #just look in anat directory if session isn't specified
 
-		ASEG="${SUB_FMRIPREP_DIR}/anat/${SUB}_desc-aseg_dseg.nii.gz"
+		ASEG="`ls ${SUB_FMRIPREP_DIR}/anat/${SUB}*_desc-aseg_dseg.nii.gz | grep -v space`"
 		echo "Using sub-cortical segmentation from ${sub_fmriprep_dir}/anat"
 			
-		T1W="${SUB_FMRIPREP_DIR}/anat/${SUB}_desc-preproc_T1w.nii.gz"
+		T1W="`ls ${SUB_FMRIPREP_DIR}/anat/${SUB}*_desc-preproc_T1w.nii.gz | grep -v space`"
 		echo "Using T1w image from ${sub_fmriprep_dir}/anat"
 
-		T1W_BRAIN_MASK="${SUB_FMRIPREP_DIR}/anat/${SUB}_desc-brain_mask.nii.gz"
+		T1W_BRAIN_MASK="`ls ${SUB_FMRIPREP_DIR}/anat/${SUB}*_desc-brain_mask.nii.gz | grep -v space`"
 		echo "Using T1w brain mask from ${SUB_FMRIPREP_DIR}/anat"
 
 	fi # ses_label
@@ -556,12 +557,12 @@ lesion_map_with_T1w() {
 		
 		# Check where T1w is
 		
-		if [ -f "${BIDS_DIR}/${SUB}/${dirSES}anat/${SUB}${_SES}_T1w.nii.gz" ];then
-			T1W="${BIDS_DIR}/${SUB}/${dirSES}anat/${SUB}${_SES}_T1w.nii.gz"
+		if [ -f "`ls ${BIDS_DIR}/${SUB}/${dirSES}anat/${SUB}${_SES}_T1w.nii.gz | grep -v space`" ];then
+			T1W="`ls ${BIDS_DIR}/${SUB}/${dirSES}anat/${SUB}${_SES}_T1w.nii.gz | grep -v space`"
 			echo "Using T1w image from ${BIDS_DIR}/${SUB}/${dirSES}anat/"
 
-		elif [ -f "${BIDS_DIR}/${SUB}/anat/${SUB}_T1w.nii.gz" ];then
-			T1W="${BIDS_DIR}/${SUB}/anat/${SUB}_T1w.nii.gz"
+		elif [ -f "`ls ${BIDS_DIR}/${SUB}/anat/${SUB}_T1w.nii.gz | grep -v space`" ];then
+			T1W="`ls ${BIDS_DIR}/${SUB}/anat/${SUB}_T1w.nii.gz | grep -v space`"
 			echo "Using T1w image from ${BIDS_DIR}/${SUB}/anat"
 		else
 			echo "Not using T1w image. None found."
@@ -570,8 +571,8 @@ lesion_map_with_T1w() {
 				
 	else #just look in anat directory if session isn't specified
 
-		if [ -f "${BIDS_DIR}/${SUB}/anat/${SUB}_T1w.nii.gz" ];then		
-			T1W="${BIDS_DIR}/${SUB}/anat/${SUB}_T1w.nii.gz"
+		if [ -f "`ls ${BIDS_DIR}/${SUB}/anat/${SUB}_T1w.nii.gz | grep -v space`" ];then		
+			T1W="`ls ${BIDS_DIR}/${SUB}/anat/${SUB}_T1w.nii.gz | grep -v space`"
 			echo "Using T1w image from ${BIDS_DIR}/${SUB}/anat"
 
 		else
