@@ -358,7 +358,7 @@ setup_subject_global_params() {
 
 	FLAIR="${BIDS_DIR}/${SUB}/${dirSES}anat/*FLAIR.nii.gz"
 	FLAIR_PREPROC="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-preproc_FLAIR.nii.gz"
-	T1W_PREPROC="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-preproc_T1w.nii.gz"
+	T1W_PREPROC="${SUB_OUTPUT_DIR}${SUB}${_SES}*_desc-preproc_T1w.nii.gz"
 	T1W_RAW="${BIDS_DIR}/${SUB}/${dirSES}anat/*T1w.nii.gz"
 	FLAIR_BRAIN_MASK="${SUB_OUTPUT_DIR}${SUB}_${SES}_space-FLAIR_desc-brain_mask.nii.gz"
 	FLAIR_BRAIN="${SUB_OUTPUT_DIR}${SUB}${_SES}_desc-brain_FLAIR.nii.gz"
@@ -557,12 +557,12 @@ lesion_map_with_T1w() {
 		
 		# Check where T1w is
 		
-		if [ -f "`ls ${BIDS_DIR}/${SUB}/${dirSES}anat/${SUB}${_SES}_T1w.nii.gz | grep -v space`" ];then
-			T1W="`ls ${BIDS_DIR}/${SUB}/${dirSES}anat/${SUB}${_SES}_T1w.nii.gz | grep -v space`"
+		if [ -f "`ls ${BIDS_DIR}/${SUB}/${dirSES}anat/${SUB}${_SES}(_T1w.nii.gz | grep -v space`" ];then
+			T1W="`ls ${BIDS_DIR}/${SUB}/${dirSES}anat/${SUB}${_SES}*_T1w.nii.gz | grep -v space`"
 			echo "Using T1w image from ${BIDS_DIR}/${SUB}/${dirSES}anat/"
 
-		elif [ -f "`ls ${BIDS_DIR}/${SUB}/anat/${SUB}_T1w.nii.gz | grep -v space`" ];then
-			T1W="`ls ${BIDS_DIR}/${SUB}/anat/${SUB}_T1w.nii.gz | grep -v space`"
+		elif [ -f "`ls ${BIDS_DIR}/${SUB}/anat/${SUB}*_T1w.nii.gz | grep -v space`" ];then
+			T1W="`ls ${BIDS_DIR}/${SUB}/anat/${SUB}*_T1w.nii.gz | grep -v space`"
 			echo "Using T1w image from ${BIDS_DIR}/${SUB}/anat"
 		else
 			echo "Not using T1w image. None found."
@@ -571,8 +571,8 @@ lesion_map_with_T1w() {
 				
 	else #just look in anat directory if session isn't specified
 
-		if [ -f "`ls ${BIDS_DIR}/${SUB}/anat/${SUB}_T1w.nii.gz | grep -v space`" ];then		
-			T1W="`ls ${BIDS_DIR}/${SUB}/anat/${SUB}_T1w.nii.gz | grep -v space`"
+		if [ -f "`ls ${BIDS_DIR}/${SUB}/anat/${SUB}*_T1w.nii.gz | grep -v space`" ];then		
+			T1W="`ls ${BIDS_DIR}/${SUB}/anat/${SUB}*_T1w.nii.gz | grep -v space`"
 			echo "Using T1w image from ${BIDS_DIR}/${SUB}/anat"
 
 		else
