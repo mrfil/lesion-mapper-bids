@@ -11,6 +11,7 @@ Wetter, N. C., Hubbard, E. A., Motl, R. W., & Sutton, B. P. (2016). Fully automa
 For research purposes only! Please see LICENSE.txt
 
 [Grace Clements](mailto:gracemc2@illinois.edu)
+[Paul Camacho](mailto:pcamach2@illinois.edu)
 [Ben Zimmerman](mailto:bzimme5@illinois.edu)  
 [Nate Wetter](mailto:nwetter2@illinois.edu)  
 [Brad Sutton](mailto:bsutton@illinois.edu)  
