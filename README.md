@@ -2,8 +2,6 @@
 
 T2 FLAIR lesion volume is an important biomarker in aging and pathophysiology. The purpose of this software is to provide an easily usable and openly accessible method for quantifying lesions from MR images that does not require manual adjustments or multiple contrasts. The tool is provided as a BIDS-app, which assumes that you have fmriprep derivatives for T1-weighted anatomical images, and a T2-FLAIR image organized according to BIDS structure.
 
-
-
 ### Acknowledgements
 
 This tool is derived from https://github.com/mrfil/lesion-mapper. Please cite the following publication when using the tool:
@@ -85,3 +83,17 @@ The lesion-mapper app has the following command line arguments:
                             		Generate png image outputs
       			-h                    
                             		Show this help message and exit
+
+### Containers
+A Docker image which runs this tool can be build with the included Dockerfile. 
+This image can then be used to generate a Singularity image as follows:
+		
+		#Start Docker registry for localhost
+		docker run -d -p 5000:5000 --restart=always --name registry registry:2
+
+		#cd to location of Dockerfile
+		docker build -t localhost:5000/lesion-mapper:latest .
+		docker push localhost:5000/lesion-mapper:latest
+		sudo SINGULARITY_NOHTTPS=1 build lesion-mapper.sif docker://localhost:5000/lesion-mapper:latest
+
+When using either container, the Freesurfer license file must be mounted to /opt/freesurfer/license.txt.
