@@ -6,7 +6,7 @@ T2 FLAIR lesion volume is an important biomarker in aging and pathophysiology. T
 
 ### Acknowledgements
 
-Please cite the following publication when using the tool:
+This tool is derived from https://github.com/mrfil/lesion-mapper. Please cite the following publication when using the tool:
 
 Wetter, N. C., Hubbard, E. A., Motl, R. W., & Sutton, B. P. (2016). Fully automated open‐source lesion mapping of T2‐FLAIR images with FSL correlates with clinical disability in MS. Brain and Behavior, 6(3). https://doi.org/10.1002/brb3.440
 
