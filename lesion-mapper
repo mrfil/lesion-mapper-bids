@@ -180,8 +180,9 @@ cmdline() {
 	###################################
 	# default values / initialization
 	###################################
-	BIDS_DIR="${ARGS[0]}"
-	DERIVATIVES_DIR="${BIDS_DIR}/derivatives/lesion-mapper"
+	BIDS_ROOT_DIR="${ARGS[0]}"
+	DERIVATIVES_DIR="${BIDS_ROOT_DIR}/derivatives/lesion-mapper"
+        BIDS_DIR="${BIDS_ROOT_DIR}/sourcedata"
 	FMRIPREP_DIR=
 	FREESURFER_DIR=
 	PARTICIPANT_LABEL=
@@ -256,13 +257,13 @@ cmdline() {
 	done
 
 	## Automatically search for fmriprep directory?
-	#if [[ -d "${BIDS_DIR}/derivatives/fmriprep" && -z "${FMRIPREP_DIR}" ]]; then
-	#	FMRIPREP_DIR="${BIDS_DIR}/derivatives/fmriprep"
+	#if [[ -d "${BIDS_ROOT_DIR}/derivatives/fmriprep" && -z "${FMRIPREP_DIR}" ]]; then
+	#	FMRIPREP_DIR="${BIDS_ROOT_DIR}/derivatives/fmriprep"
 	#fi
 
 	##Automatically search for freesurfer directory?
-	#if [[ -d "${BIDS_DIR}/derivatives/freesurfer" && -z "${FREESURFER_DIR}" ]]; then
-	#	FREESURFER_DIR="${BIDS_DIR}/derivatives/freesurfer"
+	#if [[ -d "${BIDS_ROOT_DIR}/derivatives/sourcedata/freesurfer" && -z "${FREESURFER_DIR}" ]]; then
+	#	FREESURFER_DIR="${BIDS_ROOT_DIR}/derivatives/freesurfer"
 	#fi
 
 	# Output verbosity
@@ -288,16 +289,26 @@ cmdline() {
 
 	# Check if FSL is installed
 	if [ -z "$FSLDIR" ]; then
-    		echo "ERROR: environment variable FSLDIR not set."
-    		failed=1
+                if [ -d "/opt/fsl-6.0.3" ]; then
+    		    echo "Setting FSLDIR to /opt/fsl-6.0.3"
+                    export FSLDIR="/opt/fsl-6.0.3"
+                else
+                    echo "ERROR: environment variable FSLDIR not set."
+    		    failed=1
+                fi
 	fi
 
 	# Check if freesurfer is installed if needed
 	if [ -n "$FREESURFER_DIR" ]; then
-		if [ -z "$FREESURFER_HOME" ]; then
-			echo "ERROR: environment variable FREESURFER_HOME not set"
-			failed=1
+		if [ -z "$FREESURFER_HOME" ]; then  
+                if [ -d "/opt/freesurfer" ]; then
+    		    echo "Setting FREESURFERHOME to /opt/freesurfer"
+                    export FREESURFERHOME="/opt/freesurfer"
+                else
+                    echo "ERROR: environment variable FREESURFER_HOME not set"
+		    failed=1
 		fi
+                fi
 	fi
 	
 	# Test if BIDS directory is accessible
