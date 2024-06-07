@@ -1,0 +1,174 @@
+Bootstrap: docker
+From: debian:buster
+
+# USER root
+%files
+envs.txt /opt/
+
+%environment
+export DEBIAN_FRONTEND="noninteractive"
+export LANG="en_US.UTF-8"
+export LC_ALL="en_US.UTF-8"
+export ND_ENTRYPOINT="/neurodocker/startup.sh"
+export FSLDIR="/opt/fsl-6.0.3"  
+export PATH="/opt/fsl-6.0.3/bin:$PATH"  
+export FSLOUTPUTTYPE="NIFTI_GZ"
+export FSLMULTIFILEQUIT="TRUE"  
+export FSLTCLSH="/opt/fsl-6.0.3/bin/fsltclsh"  
+export FSLWISH="/opt/fsl-6.0.3/bin/fslwish"  
+export FSLLOCKDIR=""  
+export FSLMACHINELIST="" 
+export FSLREMOTECALL=""  
+export FSLGECUDAQ="cuda.q"
+export OS="Linux"
+export FS_OVERRIDE=0
+export FIX_VERTEX_AREA=""
+export FSF_OUTPUT_FORMAT="nii.gz"
+export FREESURFER_HOME="/opt/freesurfer"
+export SUBJECTS_DIR="$FREESURFER_HOME/subjects"
+export FUNCTIONALS_DIR="$FREESURFER_HOME/sessions"
+export MNI_DIR="$FREESURFER_HOME/mni"
+export LOCAL_DIR="$FREESURFER_HOME/local"
+export MINC_BIN_DIR="$FREESURFER_HOME/mni/bin"
+export MINC_LIB_DIR="$FREESURFER_HOME/mni/lib"
+export MNI_DATAPATH="$FREESURFER_HOME/mni/data"
+export PERL5LIB="$MINC_LIB_DIR/perl5/5.8.5"
+export MNI_PERL5LIB="$MINC_LIB_DIR/perl5/5.8.5"
+export PATH="$FREESURFER_HOME/bin:$FSFAST_HOME/bin:$FREESURFER_HOME/tktools:$MINC_BIN_DIR:$PATH"
+export LESIONMAPPERDIR="/opt/lesion-mapper"
+export PATH=$PATH:$LESIONMAPPERDIR
+export NWTOOLS=$LESIONMAPPERDIR
+
+%post
+
+export ND_ENTRYPOINT="/neurodocker/startup.sh" \
+    && apt-get update -qq \
+    && apt-get install -y -q --no-install-recommends \
+           apt-utils \
+           bzip2 \
+           ca-certificates \
+           curl \
+           locales \
+           unzip \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen \
+    && dpkg-reconfigure --frontend=noninteractive locales \
+    && update-locale LANG="en_US.UTF-8" \
+    && chmod 777 /opt && chmod a+s /opt \
+    && mkdir -p /neurodocker \
+    && if [ ! -f "$ND_ENTRYPOINT" ]; then \
+         echo '#!/usr/bin/env bash' >> "$ND_ENTRYPOINT" \
+    &&   echo 'set -e' >> "$ND_ENTRYPOINT" \
+    &&   echo 'export USER="${USER:=`whoami`}"' >> "$ND_ENTRYPOINT" \
+    &&   echo 'if [ -n "$1" ]; then "$@"; else /usr/bin/env bash; fi' >> "$ND_ENTRYPOINT"; \
+    fi \
+    && chmod -R 777 /neurodocker && chmod a+s /neurodocker
+
+apt-get update -qq \
+    && apt-get install -y -q --no-install-recommends \
+           bc \
+           dc \
+           file \
+           libfontconfig1 \
+           libfreetype6 \
+           libgl1-mesa-dev \
+           libgl1-mesa-dri \
+           libglu1-mesa-dev \
+           libgomp1 \
+           libice6 \
+           libxcursor1 \
+           libxft2 \
+           libxinerama1 \
+           libxrandr2 \
+           libxrender1 \
+           libxt6 \
+           sudo \
+           wget \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && echo "Downloading FSL ..." \
+    && mkdir -p /opt/fsl-6.0.3 \
+    && curl -fsSL --retry 5 'https://urldefense.com/v3/__https://fsl.fmrib.ox.ac.uk/fsldownloads/fsl-6.0.3-centos6_64.tar.gz__;!!DZ3fjg!uiTcYj42BpPnysT73TLCb2C7yOOhPvouxD_4BgqQO0SrTdK0VWlTGOnjQsGKvmGYk6B1vQ$'  \
+    | tar -xz -C /opt/fsl-6.0.3 --strip-components 1 \
+    && sed -i '$iecho Some packages in this Docker container are non-free' $ND_ENTRYPOINT \
+    && sed -i '$iecho If you are considering commercial use of this container, please consult the relevant license:' $ND_ENTRYPOINT \
+    && sed -i '$iecho https://urldefense.com/v3/__https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/Licence__;!!DZ3fjg!uiTcYj42BpPnysT73TLCb2C7yOOhPvouxD_4BgqQO0SrTdK0VWlTGOnjQsGKvmHwolEvzg$ ' $ND_ENTRYPOINT \
+    && sed -i '$isource $FSLDIR/etc/fslconf/fsl.sh' $ND_ENTRYPOINT \
+    && echo "Installing FSL conda environment ..." \
+    && bash /opt/fsl-6.0.3/etc/fslconf/fslpython_install.sh -f /opt/fsl-6.0.3
+
+echo '{ \
+    \n  "pkg_manager": "apt", \
+    \n  "instructions": [ \
+    \n    [ \
+    \n      "base", \
+    \n      "debian:stretch" \
+    \n    ], \
+    \n    [ \
+    \n      "fsl", \
+    \n      { \
+    \n        "version": "6.0.3" \
+    \n      } \
+    \n    ] \
+    \n  ] \
+    \n}' > /neurodocker/neurodocker_specs.json
+
+apt-get update && \
+    apt-get install -y --no-install-recommends \
+                    curl \
+                    git \
+					gnupg \
+                    bzip2 \
+                    ca-certificates \
+                    build-essential \
+                    libglu1-mesa-dev \
+                    libglu1-mesa \
+                    tcsh \
+                    libqt4-scripttools \
+                    apt-utils \
+                    libfontconfig \
+                    libxrender1 \
+                    libfreetype6:amd64 \
+                    libxi-dev \
+                    libxmu-dev \
+                    libxext6 \
+                    libqt5gui5 \
+                    libxss1 \
+                    libxft2 \
+                    libjpeg62 \
+                    && \
+    apt-get clean
+# && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Installing freesurfer
+curl -sSL 'https://urldefense.com/v3/__https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/6.0.1/freesurfer-Linux-centos6_x86_64-stable-pub-v6.0.1.tar.gz__;!!DZ3fjg!oToh7G4ImzccO6F4_WLxn88PYozhIBPZKBRJSuimNdKhSWZ1BVrZu0p1QlCCIceR9Xk$'  | tar zxv --no-same-owner -C /opt \
+    --exclude='freesurfer/diffusion' \
+    --exclude='freesurfer/docs' \
+    --exclude='freesurfer/fsfast' \
+    --exclude='freesurfer/lib/cuda' \
+    --exclude='freesurfer/lib/qt' \
+    --exclude='freesurfer/matlab' \
+    --exclude='freesurfer/mni/share/man' \
+    --exclude='freesurfer/subjects/fsaverage_sym' \
+    --exclude='freesurfer/subjects/fsaverage3' \
+    --exclude='freesurfer/subjects/fsaverage4' \
+    --exclude='freesurfer/subjects/cvs_avg35' \
+    --exclude='freesurfer/subjects/cvs_avg35_inMNI152' \
+    --exclude='freesurfer/subjects/bert' \
+    --exclude='freesurfer/subjects/lh.EC_average' \
+    --exclude='freesurfer/subjects/rh.EC_average' \
+    --exclude='freesurfer/subjects/sample-*.mgz' \
+    --exclude='freesurfer/subjects/V1_average' \
+    --exclude='freesurfer/trctrain'
+
+# Installing git-lfs for .nii downloads
+curl -s 'https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh' | bash && \
+	apt-get install git-lfs
+
+cd /opt && git clone https://github.com/mrfil/lesion-mapper-bids.git && mv /opt/lesion-mapper-bids /opt/lesion-mapper && chmod 777 -R /opt/lesion-mapper
+
+%runscript
+cat /opt/envs.txt >> ~/.bashrc && source ~/.bashrc
+# %runscript
+# /bin/bash -c "cd /${LESIONMAPPERDIR} && "/neurodocker/startup.sh""
